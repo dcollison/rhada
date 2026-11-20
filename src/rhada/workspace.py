@@ -92,11 +92,18 @@ def parse_req_name(req_str: str) -> str:
             if lower_cleaned.endswith(ext):
                 leaf = Path(cleaned.split("@", 1)[-1].strip().split("#", 1)[0]).name
                 stem = re.sub(r"\.(?:whl|tar\.gz|tar\.bz2|tgz|zip)$", "", leaf, flags=re.IGNORECASE)
-                raw_cand = stem.split("-", 1)[0] if ext == ".whl" else (stem.rsplit("-", 1)[0] if "-" in stem else stem)
+                raw_cand = (
+                    stem.split("-", 1)[0]
+                    if ext == ".whl"
+                    else (stem.rsplit("-", 1)[0] if "-" in stem else stem)
+                )
                 return normalize_pkg_name(raw_cand)
 
         # 3. Handle VCS URLs without egg fragments (e.g. git+https://github.com/psf/requests.git)
-        if any(cleaned.startswith(proto) for proto in ("git+", "hg+", "svn+", "bzr+", "http://", "https://")):
+        if any(
+            cleaned.startswith(proto)
+            for proto in ("git+", "hg+", "svn+", "bzr+", "http://", "https://")
+        ):
             cand = cleaned.split("@", 1)[0].split("#", 1)[0].rstrip("/")
             last_segment = cand.split("/")[-1].removesuffix(".git")
             if last_segment and not last_segment.startswith("-"):
@@ -484,7 +491,11 @@ def _inspect_dist_info(dist_info_dir: Path) -> tuple[Component | None, set[str],
     """
     metadata_file = dist_info_dir / "METADATA"
     pkg_info_file = dist_info_dir / "PKG-INFO"
-    target_meta = metadata_file if metadata_file.is_file() else (pkg_info_file if pkg_info_file.is_file() else None)
+    target_meta = (
+        metadata_file
+        if metadata_file.is_file()
+        else (pkg_info_file if pkg_info_file.is_file() else None)
+    )
     if target_meta is None:
         return None, set(), set()
 
@@ -519,14 +530,19 @@ def _inspect_dist_info(dist_info_dir: Path) -> tuple[Component | None, set[str],
                 continue
             lbl_lower = label.lower()
             if not source_url and any(
-                k in lbl_lower for k in ("source", "repository", "repo", "code", "github", "gitlab", "bitbucket")
+                k in lbl_lower
+                for k in ("source", "repository", "repo", "code", "github", "gitlab", "bitbucket")
             ):
                 source_url = cand_url
-            if not homepage and any(k in lbl_lower for k in ("home", "website", "documentation", "docs", "url")):
+            if not homepage and any(
+                k in lbl_lower for k in ("home", "website", "documentation", "docs", "url")
+            ):
                 homepage = cand_url
 
     if not source_url:
-        if homepage and any(h in homepage.lower() for h in ("github.com", "gitlab.com", "bitbucket.org")):
+        if homepage and any(
+            h in homepage.lower() for h in ("github.com", "gitlab.com", "bitbucket.org")
+        ):
             source_url = homepage
         elif norm_pkg and version and version != "unknown":
             source_url = f"https://pypi.org/project/{norm_pkg}/{version}/#files"
@@ -536,8 +552,12 @@ def _inspect_dist_info(dist_info_dir: Path) -> tuple[Component | None, set[str],
     if not homepage:
         homepage = source_url or (f"https://pypi.org/project/{norm_pkg}/" if norm_pkg else "")
 
-    author = _clean_metadata_field(msg.get("Author")) or _clean_metadata_field(msg.get("Maintainer"))
-    author_email = _clean_metadata_field(msg.get("Author-email")) or _clean_metadata_field(msg.get("Maintainer-email"))
+    author = _clean_metadata_field(msg.get("Author")) or _clean_metadata_field(
+        msg.get("Maintainer")
+    )
+    author_email = _clean_metadata_field(msg.get("Author-email")) or _clean_metadata_field(
+        msg.get("Maintainer-email")
+    )
     declared_license = (msg.get("License") or "").strip()
     license_expression = (msg.get("License-Expression") or "").strip()
     classifiers = [c.strip() for c in (msg.get_all("Classifier") or []) if c.strip()]
@@ -634,7 +654,12 @@ def _inspect_dist_info(dist_info_dir: Path) -> tuple[Component | None, set[str],
     if record_file.is_file():
         for line in _read_text_safe(record_file, max_bytes=5_000_000).splitlines():
             path_part = line.split(",", 1)[0].strip().replace("\\", "/")
-            if not path_part or ":" in path_part or path_part.startswith(("/", "\\")) or ".." in path_part.split("/"):
+            if (
+                not path_part
+                or ":" in path_part
+                or path_part.startswith(("/", "\\"))
+                or ".." in path_part.split("/")
+            ):
                 continue
             first_seg = path_part.split("/", 1)[0]
             if (
@@ -647,7 +672,11 @@ def _inspect_dist_info(dist_info_dir: Path) -> tuple[Component | None, set[str],
                 if stem.isidentifier():
                     top_modules.add(stem)
                     all_modules.add(stem)
-            elif ".cpython-" in first_seg or ".cp3" in first_seg or first_seg.endswith((".so", ".pyd")):
+            elif (
+                ".cpython-" in first_seg
+                or ".cp3" in first_seg
+                or first_seg.endswith((".so", ".pyd"))
+            ):
                 mod_stem = extract_extension_module_name(first_seg)
                 if mod_stem:
                     parts = mod_stem.split(".")
@@ -745,7 +774,12 @@ def _discover_dist_native_libraries(
             parts = line.split(",")
             path_part = parts[0].strip().replace("\\", "/")
             hash_part = parts[1].strip() if len(parts) > 1 else ""
-            if not path_part or ":" in path_part or path_part.startswith(("/", "\\")) or ".." in path_part.split("/"):
+            if (
+                not path_part
+                or ":" in path_part
+                or path_part.startswith(("/", "\\"))
+                or ".." in path_part.split("/")
+            ):
                 continue
             leaf = path_part.split("/")[-1]
             leaf_lower = leaf.lower()
@@ -959,13 +993,22 @@ def _discover_dist_native_libraries(
                                         results.append((b_info, c))
                             else:
                                 cleaned_l = _strip_wheel_hashes_and_arch(dll_leaf)
-                                c_key = cleaned_l.lower().split(".dll", 1)[0].split("-", 1)[0].rstrip("_")
+                                c_key = (
+                                    cleaned_l.lower()
+                                    .split(".dll", 1)[0]
+                                    .split("-", 1)[0]
+                                    .rstrip("_")
+                                )
                                 prof = _match_known_native_profile(c_key)
                                 det_n, det_v = _infer_library_identity(dll_leaf, None, [])
-                                l_name = prof.canonical_name if prof else (det_n or c_key or dll_leaf)
+                                l_name = (
+                                    prof.canonical_name if prof else (det_n or c_key or dll_leaf)
+                                )
                                 spdx_i = prof.spdx_id if prof else "NOASSERTION"
                                 cop_n = [prof.copyright_notice] if prof else []
-                                lic_t = {"EMBEDDED_NATIVE_LICENSE": prof.license_text} if prof else {}
+                                lic_t = (
+                                    {"EMBEDDED_NATIVE_LICENSE": prof.license_text} if prof else {}
+                                )
                                 l_info = LicenseInfo(
                                     declared_raw=spdx_i,
                                     spdx_id=spdx_i,
@@ -1013,7 +1056,9 @@ def _discover_dist_native_libraries(
 
                 bname = bin_file.name
                 bname_lower = bname.lower()
-                if (bname_lower.endswith(".dll") or ".so" in bname_lower) and bname not in seen_files:
+                if (
+                    bname_lower.endswith(".dll") or ".so" in bname_lower
+                ) and bname not in seen_files:
                     seen_files.add(bname)
                     from rhada.elf import elf_to_native_component, is_binary_file, parse_binary
 
@@ -1329,7 +1374,11 @@ def load_tool_rhada_config(project_path: Path) -> dict[str, Any]:
             parsed["fail_on_license"] = Severity(str(raw_lic_sev).lower())
 
     # fail_on_linkage
-    raw_link = rhada_cfg.get("fail-on-linkage") if "fail-on-linkage" in rhada_cfg else rhada_cfg.get("fail_on_linkage")
+    raw_link = (
+        rhada_cfg.get("fail-on-linkage")
+        if "fail-on-linkage" in rhada_cfg
+        else rhada_cfg.get("fail_on_linkage")
+    )
     if raw_link is not None:
         parsed["fail_on_linkage"] = bool(raw_link)
 
@@ -1344,7 +1393,9 @@ def load_tool_rhada_config(project_path: Path) -> dict[str, Any]:
         parsed["verbose"] = bool(raw_verb)
 
     # include_dev
-    raw_dev = rhada_cfg.get("include-dev") if "include-dev" in rhada_cfg else rhada_cfg.get("include_dev")
+    raw_dev = (
+        rhada_cfg.get("include-dev") if "include-dev" in rhada_cfg else rhada_cfg.get("include_dev")
+    )
     if raw_dev is not None:
         parsed["include_dev"] = bool(raw_dev)
 
@@ -1404,12 +1455,20 @@ def load_tool_rhada_config(project_path: Path) -> dict[str, Any]:
     # license-files
     raw_lic_files = rhada_cfg.get("license-files") or rhada_cfg.get("license_files")
     if isinstance(raw_lic_files, dict):
-        parsed["license_files"] = {str(k).strip().lower(): str(v).strip() for k, v in raw_lic_files.items() if str(k).strip()}
+        parsed["license_files"] = {
+            str(k).strip().lower(): str(v).strip()
+            for k, v in raw_lic_files.items()
+            if str(k).strip()
+        }
 
     # license-texts
     raw_lic_texts = rhada_cfg.get("license-texts") or rhada_cfg.get("license_texts")
     if isinstance(raw_lic_texts, dict):
-        parsed["license_texts"] = {str(k).strip().lower(): str(v).strip() for k, v in raw_lic_texts.items() if str(k).strip()}
+        parsed["license_texts"] = {
+            str(k).strip().lower(): str(v).strip()
+            for k, v in raw_lic_texts.items()
+            if str(k).strip()
+        }
 
     return parsed
 
@@ -1441,7 +1500,11 @@ def _parse_setup_py(setup_py_path: Path) -> dict[str, Any]:
     for node in tree.body:
         target_name = None
         val_node = None
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
             target_name = node.targets[0].id
             val_node = node.value
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.value:
@@ -1478,17 +1541,17 @@ def _parse_setup_py(setup_py_path: Path) -> dict[str, Any]:
             return d
         return None
 
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call):
+    for walk_node in ast.walk(tree):
+        if isinstance(walk_node, ast.Call):
             func_name = ""
-            if isinstance(node.func, ast.Name):
-                func_name = node.func.id
-            elif isinstance(node.func, ast.Attribute):
-                func_name = node.func.attr
+            if isinstance(walk_node.func, ast.Name):
+                func_name = walk_node.func.id
+            elif isinstance(walk_node.func, ast.Attribute):
+                func_name = walk_node.func.attr
             if func_name != "setup":
                 continue
 
-            for kw in node.keywords:
+            for kw in walk_node.keywords:
                 if not kw.arg:
                     continue
                 val = _resolve_val(kw.value)
@@ -1532,7 +1595,9 @@ def _parse_setup_cfg(setup_cfg_path: Path) -> dict[str, Any]:
         if cp.has_section("metadata"):
             for field in ("name", "version", "description", "license", "licence"):
                 if cp.has_option("metadata", field):
-                    result[field if field != "licence" else "license"] = cp.get("metadata", field, raw=True).strip()
+                    result[field if field != "licence" else "license"] = cp.get(
+                        "metadata", field, raw=True
+                    ).strip()
 
         deps: list[str] = []
         if cp.has_section("options") and cp.has_option("options", "install_requires"):
@@ -1548,7 +1613,9 @@ def _parse_setup_cfg(setup_cfg_path: Path) -> dict[str, Any]:
             opt: dict[str, list[str]] = {}
             for opt_name, raw_val in cp.items("options.extras_require", raw=True):
                 group_reqs = [
-                    line.strip() for line in raw_val.splitlines() if line.strip() and not line.strip().startswith("#")
+                    line.strip()
+                    for line in raw_val.splitlines()
+                    if line.strip() and not line.strip().startswith("#")
                 ]
                 if group_reqs:
                     opt[opt_name] = group_reqs
@@ -1586,7 +1653,11 @@ def _discover_project_source_modules(
 ) -> None:
     """Discover all first-party Python package and module names defined in the local project workspace."""
     # 1. Project name variants
-    for p in (ws.project_name, ws.project_name.replace("-", "_"), normalize_pkg_name(ws.project_name)):
+    for p in (
+        ws.project_name,
+        ws.project_name.replace("-", "_"),
+        normalize_pkg_name(ws.project_name),
+    ):
         if p and p != "unknown-project":
             ws.project_modules.add(p)
             ws.module_to_package[p] = ws.project_name
@@ -1663,7 +1734,11 @@ def _discover_project_source_modules(
     for s_root in search_roots:
         try:
             for item in s_root.iterdir():
-                if not item.is_dir() or item.name.lower() in ignored_dirs or item.name.startswith((".", "_")):
+                if (
+                    not item.is_dir()
+                    or item.name.lower() in ignored_dirs
+                    or item.name.startswith((".", "_"))
+                ):
                     continue
                 # If directory contains __init__.py, it is a package
                 if (item / "__init__.py").is_file():
@@ -1685,7 +1760,11 @@ def _discover_project_source_modules(
                     # Also check subdirectories for packages (e.g. entrypoint_pkg/banana)
                     try:
                         for sub in item.iterdir():
-                            if sub.is_dir() and (sub / "__init__.py").is_file() and sub.name not in ignored_dirs:
+                            if (
+                                sub.is_dir()
+                                and (sub / "__init__.py").is_file()
+                                and sub.name not in ignored_dirs
+                            ):
                                 sub_name = sub.name
                                 ws.project_modules.add(sub_name)
                                 ws.module_to_package[sub_name] = ws.project_name
@@ -1720,7 +1799,9 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
     project_table = pyproject_data.get("project", {})
     has_explicit_project_metadata = isinstance(project_table, dict) and bool(project_table)
     if isinstance(project_table, dict) and has_explicit_project_metadata:
-        ws.project_name = normalize_pkg_name(project_table.get("name", project_path.name)) or project_path.name
+        ws.project_name = (
+            normalize_pkg_name(project_table.get("name", project_path.name)) or project_path.name
+        )
         ws.project_version = str(project_table.get("version", "unknown"))
         if ws.project_version in ("0.0.0", "0.0.1"):
             ws.project_version = "unknown"
@@ -1744,7 +1825,14 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
                     for req_str in group_reqs:
                         if isinstance(req_str, str):
                             dep_name = parse_req_name(req_str)
-                            if dep_name and group_name.lower() in {"dev", "test", "testing", "lint", "build", "docs"}:
+                            if dep_name and group_name.lower() in {
+                                "dev",
+                                "test",
+                                "testing",
+                                "lint",
+                                "build",
+                                "docs",
+                            }:
                                 ws.direct_dev_deps.add(dep_name)
     else:
         # Fall back to legacy setup.cfg and setup.py
@@ -1773,7 +1861,14 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
             for group_name, group_reqs in legacy_data.get("optional-dependencies", {}).items():
                 for req_str in group_reqs:
                     dep_name = parse_req_name(req_str)
-                    if dep_name and group_name.lower() in {"dev", "test", "testing", "lint", "build", "docs"}:
+                    if dep_name and group_name.lower() in {
+                        "dev",
+                        "test",
+                        "testing",
+                        "lint",
+                        "build",
+                        "docs",
+                    }:
                         ws.direct_dev_deps.add(dep_name)
 
     # Check requirements.txt if direct_runtime_deps is still empty
@@ -1937,13 +2032,17 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
                 for d in pkg_entry.get("dependencies", []) or []:
                     if d not in merged_deps:
                         merged_deps.append(d)
-                chosen = dict(pkg_entry) if venv_ver and cand_ver == venv_ver else dict(existing_entry)
+                chosen = (
+                    dict(pkg_entry) if venv_ver and cand_ver == venv_ver else dict(existing_entry)
+                )
                 chosen["dependencies"] = merged_deps
                 lock_map[pname] = chosen
             else:
                 lock_map[pname] = pkg_entry
             source = pkg_entry.get("source", {})
-            if isinstance(source, dict) and ("virtual" in source or "editable" in source or "directory" in source):
+            if isinstance(source, dict) and (
+                "virtual" in source or "editable" in source or "directory" in source
+            ):
                 root_pkg_names.add(pname)
             if pname == ws.project_name:
                 root_pkg_names.add(pname)
@@ -2042,7 +2141,9 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
                 if "uv.lock" not in comp.discovery_evidence:
                     comp.discovery_evidence.insert(0, "uv.lock")
             else:
-                inferred_mods = sorted({pname.replace("-", "_"), *KNOWN_PACKAGE_TOP_MODULES.get(pname, [])})
+                inferred_mods = sorted(
+                    {pname.replace("-", "_"), *KNOWN_PACKAGE_TOP_MODULES.get(pname, [])}
+                )
                 p_src = (
                     f"https://pypi.org/project/{pname}/{pver}/#files"
                     if pver != "unknown"
@@ -2124,7 +2225,9 @@ def inspect_workspace(project_path: Path, include_dev: bool = False) -> Workspac
         # If neither uv.lock nor .venv had entries for declared dependencies in pyproject.toml, add stubs
         for dep_name in sorted(ws.direct_runtime_deps):
             if dep_name not in ws.components and dep_name != ws.project_name:
-                inferred_mods = sorted({dep_name.replace("-", "_"), *KNOWN_PACKAGE_TOP_MODULES.get(dep_name, [])})
+                inferred_mods = sorted(
+                    {dep_name.replace("-", "_"), *KNOWN_PACKAGE_TOP_MODULES.get(dep_name, [])}
+                )
                 ws.components[dep_name] = Component(
                     name=dep_name,
                     version="unknown",

@@ -33,7 +33,10 @@ def test_normalize_single_license_variants() -> None:
     assert normalize_single_license("MIT License") == "MIT"
     assert normalize_single_license("Apache Software License 2.0") == "Apache-2.0"
     assert normalize_single_license("3-Clause BSD") == "BSD-3-Clause"
-    assert normalize_single_license("GNU Lesser General Public License v2.1 or later") == "LGPL-2.1-or-later"
+    assert (
+        normalize_single_license("GNU Lesser General Public License v2.1 or later")
+        == "LGPL-2.1-or-later"
+    )
     assert normalize_single_license("GNU Affero General Public License v3") == "AGPL-3.0-only"
     assert normalize_single_license("GPL-3.0-with-GCC-exception") == "GPL-3.0-with-GCC-exception"
     assert normalize_single_license("UNKNOWN") == "NOASSERTION"
@@ -163,7 +166,9 @@ def test_generate_third_party_notices(tmp_path: Path) -> None:
         homepage="https://www.python-httpx.org/",
         license_info=build_license_info(
             declared_raw="BSD-3-Clause",
-            license_texts={"LICENSE.md": "Copyright © 2019, Encode OSS Ltd. All rights reserved.\nBSD 3-Clause..."},
+            license_texts={
+                "LICENSE.md": "Copyright © 2019, Encode OSS Ltd. All rights reserved.\nBSD 3-Clause..."
+            },
             notice_texts={"NOTICE": "Encode OSS Notice file content"},
         ),
     )
@@ -264,7 +269,10 @@ def test_company_internal_license_suppresses_violations() -> None:
         layout=DistributionLayout.SOURCE_WORKSPACE,
         config=AuditConfig(allowed_licenses={"LicenseRef-Acme-Proprietary"}),
     )
-    assert not any(f.rule_id in ("LIC-PROPRIETARY", "LIC-POLICY-NOT-ALLOWED", "LIC-UNKNOWN") for f in findings_allowed)
+    assert not any(
+        f.rule_id in ("LIC-PROPRIETARY", "LIC-POLICY-NOT-ALLOWED", "LIC-UNKNOWN")
+        for f in findings_allowed
+    )
 
 
 def test_legal_disclaimer_coverage() -> None:
@@ -365,9 +373,6 @@ def test_normalize_single_license_heuristics_and_boundaries() -> None:
     assert normalize_single_license("MIT-0") == "MIT-0"
 
 
-
-
-
 def test_parse_spdx_expression_divergent_candidates_multi_licensing() -> None:
     # 1. Divergence between declared_raw "MIT" and classifier GPL-3.0
     spdx_id, risk_cat, is_dual, choices = parse_spdx_expression(
@@ -395,7 +400,9 @@ def test_parse_spdx_expression_divergent_candidates_multi_licensing() -> None:
 def test_extract_copyright_notices_author_fallback_preservation() -> None:
     # Notice text has third-party or template copyright
     notices_in = {"LICENSE": "Copyright 2012 Original Contributor\nSome text"}
-    result = extract_copyright_notices(notices_in, author="Alice Smith", author_email="alice@example.com")
+    result = extract_copyright_notices(
+        notices_in, author="Alice Smith", author_email="alice@example.com"
+    )
     assert len(result) == 2
     assert "Copyright 2012 Original Contributor" in result[0]
     assert "Alice Smith <alice@example.com>" in result[1]
@@ -484,13 +491,17 @@ def test_cross_component_license_incompatibility_detection() -> None:
 def test_evaluate_spdx_denylist_and_allowlist_with_exceptions() -> None:
     # Denylist: forbidding base license GPL-3.0-only must catch GPL-3.0-only WITH Classpath-exception-2.0
     assert evaluate_spdx_denylist("GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY"})
-    assert evaluate_spdx_denylist("GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY WITH CLASSPATH-EXCEPTION-2.0"})
+    assert evaluate_spdx_denylist(
+        "GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY WITH CLASSPATH-EXCEPTION-2.0"}
+    )
     # Permissive MIT is not denied
     assert not evaluate_spdx_denylist("MIT", {"GPL-3.0-ONLY"})
 
     # Allowlist: allowing base license allows WITH exception
     assert evaluate_spdx_allowlist("GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY"})
-    assert evaluate_spdx_allowlist("GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY WITH CLASSPATH-EXCEPTION-2.0"})
+    assert evaluate_spdx_allowlist(
+        "GPL-3.0-only WITH Classpath-exception-2.0", {"GPL-3.0-ONLY WITH CLASSPATH-EXCEPTION-2.0"}
+    )
 
 
 def test_extra_allowed_licenses_supplements_without_squashing_permissive() -> None:

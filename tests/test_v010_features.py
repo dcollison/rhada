@@ -160,8 +160,12 @@ inlined-wheel = "Copyright (c) 2026 Inlined Corp. Apache-2.0 License."
     )
     sp = ws / ".venv" / "Lib" / "site-packages"
     # Create wheels without LICENSE files in dist-info
-    create_dist_info(sp, "unlicensed-wheel", "1.0.0", license_str="MIT", top_level=["unlicensed_wheel"])
-    create_dist_info(sp, "inlined-wheel", "1.0.0", license_str="Apache-2.0", top_level=["inlined_wheel"])
+    create_dist_info(
+        sp, "unlicensed-wheel", "1.0.0", license_str="MIT", top_level=["unlicensed_wheel"]
+    )
+    create_dist_info(
+        sp, "inlined-wheel", "1.0.0", license_str="Apache-2.0", top_level=["inlined_wheel"]
+    )
 
     config = AuditConfig(project_path=ws, offline=True)
     report = run_audit(config)
@@ -332,8 +336,12 @@ def test_sbom_diff_engine(tmp_path: Path) -> None:
     assert "CVE-2024-2222" in diff_json["new_vulnerabilities"]
 
     # Exit code gates test
-    res_fail_vuln = runner.invoke(cli, ["diff", str(base_file), str(target_file), "--fail-on-new-vuln"])
+    res_fail_vuln = runner.invoke(
+        cli, ["diff", str(base_file), str(target_file), "--fail-on-new-vuln"]
+    )
     assert res_fail_vuln.exit_code == 1
 
-    res_fail_changes = runner.invoke(cli, ["diff", str(base_file), str(target_file), "--fail-on-changes"])
+    res_fail_changes = runner.invoke(
+        cli, ["diff", str(base_file), str(target_file), "--fail-on-changes"]
+    )
     assert res_fail_changes.exit_code == 1

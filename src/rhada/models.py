@@ -557,11 +557,19 @@ class AuditReport:
 
     @property
     def bundled_python_components(self) -> list[Component]:
-        return [c for c in self.components if c.component_type == ComponentType.PYTHON_PACKAGE and c.is_bundled]
+        return [
+            c
+            for c in self.components
+            if c.component_type == ComponentType.PYTHON_PACKAGE and c.is_bundled
+        ]
 
     @property
     def native_components(self) -> list[Component]:
-        return [c for c in self.components if c.component_type == ComponentType.NATIVE_LIBRARY and c.is_bundled]
+        return [
+            c
+            for c in self.components
+            if c.component_type == ComponentType.NATIVE_LIBRARY and c.is_bundled
+        ]
 
     @property
     def all_vulnerabilities(self) -> list[Vulnerability]:
@@ -572,7 +580,9 @@ class AuditReport:
         return vulns
 
     def vulnerability_counts_by_severity(self) -> dict[str, int]:
-        counts = {s.value: 0 for s in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW)}
+        counts = {
+            s.value: 0 for s in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW)
+        }
         for v in self.all_vulnerabilities:
             if v.severity.value in counts:
                 counts[v.severity.value] += 1
@@ -599,7 +609,9 @@ class AuditReport:
                 "file_coverage_percent": round(self.file_inventory.coverage_percent, 1)
                 if self.file_inventory
                 else None,
-                "unaccounted_files_count": len(self.file_inventory.unaccounted_files) if self.file_inventory else 0,
+                "unaccounted_files_count": len(self.file_inventory.unaccounted_files)
+                if self.file_inventory
+                else 0,
                 "exit_code": int(self.exit_code),
                 "passed": self.exit_code == ExitCode.OK,
             },

@@ -6,7 +6,7 @@ import contextlib
 import json
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -56,7 +56,7 @@ def _safe_echo_text(text: str, *, err: bool = False, nl: bool = True) -> None:
 class DefaultToAuditGroup(TyperGroup):
     """Typer group that defaults to the 'audit' command when invoked with flags directly."""
 
-    def parse_args(self, ctx: typer.Context, args: list[str]) -> list[str]:
+    def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
         if args and args[0] not in self.commands and args[0] not in ("--help", "-h", "--version"):
             args = ["audit", *args]
         elif not args:
@@ -416,11 +416,17 @@ def notices_cmd(
     ] = None,
     output_path: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="Write THIRD_PARTY_NOTICES to a file instead of stdout."),
+        typer.Option(
+            "--output", "-o", help="Write THIRD_PARTY_NOTICES to a file instead of stdout."
+        ),
     ] = None,
     notices_format: Annotated[
         str,
-        typer.Option("--format", "-f", help="Output format: 'text' or 'markdown' (auto-detected if output path ends with .md)."),
+        typer.Option(
+            "--format",
+            "-f",
+            help="Output format: 'text' or 'markdown' (auto-detected if output path ends with .md).",
+        ),
     ] = "text",
 ) -> None:
     """Generate a THIRD_PARTY_NOTICES attribution file (plain text or markdown)."""
@@ -436,12 +442,20 @@ def notices_cmd(
     )
     try:
         report = run_audit(config)
-        is_md = notices_format in ("markdown", "md") or (output_path is not None and output_path.suffix.lower() in (".md", ".markdown"))
+        is_md = notices_format in ("markdown", "md") or (
+            output_path is not None and output_path.suffix.lower() in (".md", ".markdown")
+        )
         if output_path is not None:
             write_third_party_notices(report, output_path, fmt=notices_format)
-            typer.echo(f"THIRD_PARTY_NOTICES ({'markdown' if is_md else 'text'}) written to {output_path}")
+            typer.echo(
+                f"THIRD_PARTY_NOTICES ({'markdown' if is_md else 'text'}) written to {output_path}"
+            )
         else:
-            txt = generate_third_party_notices_markdown(report) if is_md else generate_third_party_notices(report)
+            txt = (
+                generate_third_party_notices_markdown(report)
+                if is_md
+                else generate_third_party_notices(report)
+            )
             _safe_echo_text(txt, nl=False)
     except (OSError, ValueError, RuntimeError) as exc:
         typer.echo(f"Error generating THIRD_PARTY_NOTICES: {exc}", err=True)
@@ -452,7 +466,9 @@ def notices_cmd(
 def diff_cmd(
     base: Annotated[
         Path,
-        typer.Argument(help="Path to baseline report JSON or SBOM file (CycloneDX, SPDX, or Rhada JSON)."),
+        typer.Argument(
+            help="Path to baseline report JSON or SBOM file (CycloneDX, SPDX, or Rhada JSON)."
+        ),
     ],
     target: Annotated[
         Path,
@@ -460,19 +476,30 @@ def diff_cmd(
     ],
     console_format: Annotated[
         ConsoleFormat,
-        typer.Option("--format", "-f", case_sensitive=False, help="Console output format (table or json)."),
+        typer.Option(
+            "--format", "-f", case_sensitive=False, help="Console output format (table or json)."
+        ),
     ] = ConsoleFormat.TABLE,
     fail_on_downgrade: Annotated[
         bool,
-        typer.Option("--fail-on-downgrade", help="Exit with non-zero code if any dependency version was downgraded."),
+        typer.Option(
+            "--fail-on-downgrade",
+            help="Exit with non-zero code if any dependency version was downgraded.",
+        ),
     ] = False,
     fail_on_new_vuln: Annotated[
         bool,
-        typer.Option("--fail-on-new-vuln", help="Exit with non-zero code if any new security vulnerability was introduced."),
+        typer.Option(
+            "--fail-on-new-vuln",
+            help="Exit with non-zero code if any new security vulnerability was introduced.",
+        ),
     ] = False,
     fail_on_changes: Annotated[
         bool,
-        typer.Option("--fail-on-changes", help="Exit with non-zero code if any dependency, version, or licence changed."),
+        typer.Option(
+            "--fail-on-changes",
+            help="Exit with non-zero code if any dependency, version, or licence changed.",
+        ),
     ] = False,
 ) -> None:
     """Compare two SBOMs or Rhada reports to detect dependency, licence, and vulnerability deltas."""
@@ -509,7 +536,9 @@ def diff_cmd(
 def inspect_elf_cmd(
     target: Annotated[
         Path,
-        typer.Argument(help="Target ELF/PE binary (.so, .dll, .pyd, .exe) or distribution directory to inspect."),
+        typer.Argument(
+            help="Target ELF/PE binary (.so, .dll, .pyd, .exe) or distribution directory to inspect."
+        ),
     ],
 ) -> None:
     """Inspect ELF and Windows PE binaries and verify dynamic linkage in a file or directory."""

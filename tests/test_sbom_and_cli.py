@@ -180,7 +180,9 @@ dependencies = ["clean-pkg>=1.0.0"]
     assert res_link.exit_code == int(ExitCode.LINKAGE_FAILURE)
 
     # 4. Subcommands: sbom, notices, inspect-elf
-    res_sbom_sub = runner.invoke(cli, ["sbom", "--project", str(ws), "--format", "spdx", "--offline"])
+    res_sbom_sub = runner.invoke(
+        cli, ["sbom", "--project", str(ws), "--format", "spdx", "--offline"]
+    )
     assert res_sbom_sub.exit_code == 0
     assert json.loads(res_sbom_sub.output)["spdxVersion"] == "SPDX-2.3"
 
@@ -259,7 +261,9 @@ def test_sbom_malformed_urls_and_same_named_components() -> None:
 
     cdx = generate_cyclonedx_sbom(report)
     assert len(cdx["components"]) == 2
-    root_dep_entry = next(d for d in cdx["dependencies"] if d["ref"] == "pkg:generic/dual-app@1.0.0")
+    root_dep_entry = next(
+        d for d in cdx["dependencies"] if d["ref"] == "pkg:generic/dual-app@1.0.0"
+    )
     assert set(root_dep_entry["dependsOn"]) == {
         "pkg:pypi/openssl@3.2.1",
         "pkg:generic/openssl@3.2.1",
@@ -267,7 +271,9 @@ def test_sbom_malformed_urls_and_same_named_components() -> None:
     vulns_by_id = {v["id"]: v for v in cdx["vulnerabilities"]}
     assert vulns_by_id["CVE-2024-0001"]["affects"] == [{"ref": "pkg:pypi/openssl@3.2.1"}]
     assert vulns_by_id["CVE-2024-0002"]["affects"] == [{"ref": "pkg:generic/openssl@3.2.1"}]
-    assert vulns_by_id["CVE-2024-0001"]["advisories"] == [{"url": "https://osv.dev/vulnerability/CVE-2024-0001"}]
+    assert vulns_by_id["CVE-2024-0001"]["advisories"] == [
+        {"url": "https://osv.dev/vulnerability/CVE-2024-0001"}
+    ]
     for comp_entry in cdx["components"]:
         assert "externalReferences" not in comp_entry
 
@@ -319,14 +325,18 @@ dependencies = ["unicode-pkg>=1.0.0"]
         "1.0.0",
         license_str="MIT",
         top_level=["unicode_pkg"],
-        license_files={"LICENSE": "Copyright (c) 2024 Michał Wędrowny \u0144 \u2713 \u00a9\nMIT License"},
+        license_files={
+            "LICENSE": "Copyright (c) 2024 Michał Wędrowny \u0144 \u2713 \u00a9\nMIT License"
+        },
     )
     res_notices = runner.invoke(cli, ["notices", "--project", str(ws)])
     assert res_notices.exit_code == 0
     assert "Michał Wędrowny" in res_notices.output or "\u0144" in res_notices.output
 
     # Test invoking audit with plural --allow-licences alias
-    res_alias = runner.invoke(cli, ["audit", "--project", str(ws), "--offline", "--allow-licences", "MIT,Apache-2.0"])
+    res_alias = runner.invoke(
+        cli, ["audit", "--project", str(ws), "--offline", "--allow-licences", "MIT,Apache-2.0"]
+    )
     assert res_alias.exit_code == 0
 
     # Test audit CLI with Corporate Internal Licence
@@ -360,7 +370,14 @@ dependencies = ["acme-internal-service>=1.0.0"]
     # With --allow-licence using human-readable raw title
     res_allow_raw = runner.invoke(
         cli,
-        ["audit", "--project", str(internal_ws), "--offline", "--allow-licence", "Acme Corp Internal Licence"],
+        [
+            "audit",
+            "--project",
+            str(internal_ws),
+            "--offline",
+            "--allow-licence",
+            "Acme Corp Internal Licence",
+        ],
     )
     assert res_allow_raw.exit_code == 0
     assert "Status: PASSED" in strip_ansi(res_allow_raw.output)
@@ -369,7 +386,14 @@ dependencies = ["acme-internal-service>=1.0.0"]
     # With --allow-licence using SPDX ID
     res_allow_spdx = runner.invoke(
         cli,
-        ["audit", "--project", str(internal_ws), "--offline", "--allow-licence", "LicenseRef-Acme-Corp-Internal"],
+        [
+            "audit",
+            "--project",
+            str(internal_ws),
+            "--offline",
+            "--allow-licence",
+            "LicenseRef-Acme-Corp-Internal",
+        ],
     )
     assert res_allow_spdx.exit_code == 0
     assert "Status: PASSED" in strip_ansi(res_allow_spdx.output)
@@ -551,7 +575,9 @@ dependencies = ["corp-utils>=1.0.0", "legacy-lib>=0.1.0"]
     )
     sp = ws / ".venv" / "Lib" / "site-packages"
     create_dist_info(sp, "corp-utils", "1.0.0", license_str="Proprietary", top_level=["corp_utils"])
-    create_dist_info(sp, "legacy-lib", "0.1.0", license_str="GPL-3.0-only", top_level=["legacy_lib"])
+    create_dist_info(
+        sp, "legacy-lib", "0.1.0", license_str="GPL-3.0-only", top_level=["legacy_lib"]
+    )
 
     runner = CliRunner(env={"COLUMNS": "160"})
 
@@ -610,12 +636,19 @@ dependencies = ["mit-helper>=1.0.0", "custom-sdk>=2.0.0"]
     assert "LIC-PROPRIETARY" in res_default.output
 
     # 2. Strict --allow-licence "Proprietary" flags mit-helper as LIC-POLICY-NOT-ALLOWED
-    res_strict = runner.invoke(cli, ["--project", str(ws), "--offline", "--allow-licence", "Proprietary"])
+    res_strict = runner.invoke(
+        cli, ["--project", str(ws), "--offline", "--allow-licence", "Proprietary"]
+    )
     assert res_strict.exit_code == int(ExitCode.LICENSE_FAILURE), res_strict.output
     assert "LIC-POLICY-NOT-ALLOWED" in res_strict.output
 
     # 3. Supplemental --allow-extra-licence "Proprietary" passes OK (0) without flagging MIT
-    for flag in ("--allow-extra-licence", "--allow-extra-license", "--allow-extra-licences", "--allow-extra-licenses"):
+    for flag in (
+        "--allow-extra-licence",
+        "--allow-extra-license",
+        "--allow-extra-licences",
+        "--allow-extra-licenses",
+    ):
         res_extra = runner.invoke(cli, ["--project", str(ws), "--offline", flag, "Proprietary"])
         assert res_extra.exit_code == int(ExitCode.OK), f"Failed with {flag}: {res_extra.output}"
         assert "LIC-POLICY-NOT-ALLOWED" not in res_extra.output

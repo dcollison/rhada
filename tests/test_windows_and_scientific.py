@@ -225,9 +225,7 @@ dependencies = ["numpy>=2.0.0", "scipy>=1.14.0"]
         },
     )
     # Create a large RECORD (>300 KB) to verify it is not truncated before reading all modules
-    large_record_lines = [
-        f"scipy/ submod_{i}/file_{i}.py,sha256=aaa,100" for i in range(6000)
-    ]
+    large_record_lines = [f"scipy/ submod_{i}/file_{i}.py,sha256=aaa,100" for i in range(6000)]
     large_record_lines.append("scipy/linalg/cython_blas.cp312-win_amd64.pyd,sha256=bbb,2048")
     large_record_lines.append("scipy.libs/libscipy_openblas64_-ff651d7f.dll,sha256=ccc,4096")
     (sp_dist / "RECORD").write_text("\n".join(large_record_lines) + "\n", encoding="utf-8")
@@ -341,11 +339,15 @@ def test_scipy_cython_extension_with_many_exports_and_auditwheel_libs(tmp_path: 
 
     assert "libquadmath" in nat_by_name
     assert nat_by_name["libquadmath"].license_info.spdx_id == "LGPL-2.1-or-later"
-    assert nat_by_name["libquadmath"].license_info.risk_category == LicenseRiskCategory.WEAK_COPYLEFT
+    assert (
+        nat_by_name["libquadmath"].license_info.risk_category == LicenseRiskCategory.WEAK_COPYLEFT
+    )
     assert nat_by_name["libquadmath"].has_dynamic_relinking is True
 
 
-def test_windows_pyinstaller_standalone_and_onefile_with_delvewheel_numpy_scipy(tmp_path: Path) -> None:
+def test_windows_pyinstaller_standalone_and_onefile_with_delvewheel_numpy_scipy(
+    tmp_path: Path,
+) -> None:
     """
     End-to-end audit of a Windows project using NumPy and SciPy compiled with:
     1. PyInstaller standalone directory (`_internal/` with `.exe`, `.pyd`, `numpy.libs/.load-order-*`, `.dll`)
@@ -370,7 +372,9 @@ dev = ["pytest>=8.0.0", "pyinstaller>=6.0.0", "delvewheel>=1.8.0"]
     create_dist_info(sp, "numpy", "2.1.3", license_str="BSD-3-Clause", top_level=["numpy"])
     create_dist_info(sp, "scipy", "1.14.1", license_str="BSD-3-Clause", top_level=["scipy"])
     create_dist_info(sp, "pytest", "8.3.0", license_str="MIT", top_level=["pytest"])
-    create_dist_info(sp, "pyinstaller", "6.10.0", license_str="GPL-2.0-or-later", top_level=["PyInstaller"])
+    create_dist_info(
+        sp, "pyinstaller", "6.10.0", license_str="GPL-2.0-or-later", top_level=["PyInstaller"]
+    )
     create_dist_info(sp, "delvewheel", "1.8.2", license_str="MIT", top_level=["delvewheel"])
 
     # --- 1. PyInstaller Standalone Directory on Windows ---
@@ -670,7 +674,9 @@ dependencies = ["numpy>=2.0.0", "scipy>=1.14.0"]
         encoding="utf-8",
     )
     sp = ws_dir / ".venv" / "Lib" / "site-packages"
-    np_dist = create_dist_info(sp, "numpy", "2.1.3", license_str="BSD-3-Clause", top_level=["numpy"])
+    np_dist = create_dist_info(
+        sp, "numpy", "2.1.3", license_str="BSD-3-Clause", top_level=["numpy"]
+    )
     (np_dist / "RECORD").write_text(
         "numpy/__init__.py,sha256=111,100\n"
         "numpy/_core/_multiarray_umath.cp312-win_amd64.pyd,sha256=222,2048\n"
@@ -678,7 +684,9 @@ dependencies = ["numpy>=2.0.0", "scipy>=1.14.0"]
         encoding="utf-8",
     )
 
-    sc_dist = create_dist_info(sp, "scipy", "1.14.1", license_str="BSD-3-Clause", top_level=["scipy"])
+    sc_dist = create_dist_info(
+        sp, "scipy", "1.14.1", license_str="BSD-3-Clause", top_level=["scipy"]
+    )
     (sc_dist / "RECORD").write_text(
         "scipy/__init__.py,sha256=444,100\n"
         "scipy/special/_ellip_harm_2.cp312-win_amd64.pyd,sha256=555,2048\n"
@@ -981,7 +989,9 @@ dependencies = ["numpy>=2.0.0", "scipy>=1.14.0"]
     (dist_dir / "scipy" / "__init__.py").write_text("# scipy root\n", encoding="utf-8")
     (dist_dir / "scipy" / "special.py").write_text("# scipy.special\n", encoding="utf-8")
     (dist_dir / "scipy" / "linalg.py").write_text("# scipy.linalg\n", encoding="utf-8")
-    (dist_dir / "scipy" / "special" / "orthogonal.py").write_text("# scipy.special.orthogonal\n", encoding="utf-8")
+    (dist_dir / "scipy" / "special" / "orthogonal.py").write_text(
+        "# scipy.special.orthogonal\n", encoding="utf-8"
+    )
     (dist_dir / "numpy" / "__init__.py").write_text("# numpy root\n", encoding="utf-8")
     (dist_dir / "numpy" / "linalg.py").write_text("# numpy.linalg\n", encoding="utf-8")
 
@@ -1032,7 +1042,9 @@ def test_dist_info_binary_license_files_and_symlinks_skipped(tmp_path: Path) -> 
     lic_dir.mkdir(exist_ok=True)
     (lic_dir / "LICENSE.txt").write_text("Legitimate text licence notice.", encoding="utf-8")
     # Binary PNG file with null bytes
-    (lic_dir / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01")
+    (lic_dir / "logo.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    )
     # PDF file
     (lic_dir / "license.pdf").write_bytes(b"%PDF-1.4\x00\x01\x02\x03\xff\xfe")
     # Hidden system file
@@ -1100,4 +1112,3 @@ def test_windows_mkl_rt_versioned_linkage_resolution(tmp_path: Path) -> None:
     assert report.is_self_contained is True
     assert "mkl_rt.2.dll" in report.resolved_dependencies
     assert len(report.unresolved_dependencies) == 0
-

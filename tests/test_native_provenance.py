@@ -41,7 +41,9 @@ from tests.helpers import (
 def test_infer_binary_provenance_patterns() -> None:
     """Verify inference across delvewheel, auditwheel, dedicated dirs, and system ABI."""
     # 1. Delvewheel load-order marker token
-    pkg, prov = infer_binary_provenance("d:/app/.load-order-scipy-1.14.0", ".load-order-scipy-1.14.0")
+    pkg, prov = infer_binary_provenance(
+        "d:/app/.load-order-scipy-1.14.0", ".load-order-scipy-1.14.0"
+    )
     assert pkg == "scipy"
     assert prov == "vendored-in-wheel:scipy"
 
@@ -133,7 +135,9 @@ def test_source_workspace_numpy_scipy_libs_and_record(tmp_path: Path) -> None:
     # RECORD file in numpy-2.0.0.dist-info
     c_ext_file = sp_dir / "numpy" / "_core" / "_multiarray_umath.cpython-312-x86_64-linux-gnu.so"
     c_ext_file.parent.mkdir(parents=True)
-    c_ext_file.write_bytes(build_synthetic_elf64(is_executable=False, soname="_multiarray_umath.so"))
+    c_ext_file.write_bytes(
+        build_synthetic_elf64(is_executable=False, soname="_multiarray_umath.so")
+    )
 
     record_content = (
         f"numpy.libs/libopenblas64_-28852d63.so,sha256=xxx,{len(openblas_bytes)}\n"
@@ -288,7 +292,9 @@ def test_compiled_dist_monolithic_onefile_provenance(tmp_path: Path) -> None:
     # Verify _rust.abi3.so was recognized as module file for cryptography, NOT as native third-party library
     assert "rust" not in nat_map
     assert "_rust" not in nat_map
-    assert "cryptography" in res.bundled_modules or any("cryptography" in m for m in res.bundled_modules)
+    assert "cryptography" in res.bundled_modules or any(
+        "cryptography" in m for m in res.bundled_modules
+    )
 
 
 def test_source_only_audit_populates_linkage_report(tmp_path: Path) -> None:
@@ -326,7 +332,9 @@ def test_source_only_audit_populates_linkage_report(tmp_path: Path) -> None:
     assert report.linkage_report is not None
     assert len(report.linkage_report.elf_binaries) >= 1
     assert "pillow" in report.linkage_report.package_libraries
-    assert any("libtiff" in lib.lower() for lib in report.linkage_report.package_libraries["pillow"])
+    assert any(
+        "libtiff" in lib.lower() for lib in report.linkage_report.package_libraries["pillow"]
+    )
 
 
 def test_cyclonedx_and_spdx_sbom_provenance(tmp_path: Path) -> None:
@@ -351,9 +359,7 @@ def test_cyclonedx_and_spdx_sbom_provenance(tmp_path: Path) -> None:
         license_info=LicenseInfo(spdx_id="BSD-3-Clause"),
     )
 
-    report = run_audit(
-        AuditConfig(project_path=tmp_path, dist_path=None, offline=True)
-    )
+    report = run_audit(AuditConfig(project_path=tmp_path, dist_path=None, offline=True))
     report.components = [numpy_comp, blas_comp]
 
     # 1. Test CycloneDX 1.5 JSON
@@ -386,9 +392,9 @@ def test_cyclonedx_and_spdx_sbom_provenance(tmp_path: Path) -> None:
     # CONTAINS relationship in SPDX
     rels = spdx_data.get("relationships", [])
     contains_rels = [
-        r for r in rels
-        if r["relationshipType"] == "CONTAINS"
-        and r["relatedSpdxElement"] == blas_pkg["SPDXID"]
+        r
+        for r in rels
+        if r["relationshipType"] == "CONTAINS" and r["relatedSpdxElement"] == blas_pkg["SPDXID"]
     ]
     assert len(contains_rels) >= 1
     assert contains_rels[0]["spdxElementId"] == pkgs["numpy"]["SPDXID"]
@@ -574,12 +580,16 @@ def test_correlate_workspace_and_dist_with_flattened_dlls(tmp_path: Path) -> Non
 def test_infer_binary_provenance_linux_and_windows_absolute_paths() -> None:
     """Verify infer_binary_provenance handles Linux and Windows absolute paths without misattribution."""
     # Linux absolute paths in virtualenvs / containers
-    pkg, prov = infer_binary_provenance("/home/user/workspace/numpy/core/libopenblas.so.0", "libopenblas.so.0")
+    pkg, prov = infer_binary_provenance(
+        "/home/user/workspace/numpy/core/libopenblas.so.0", "libopenblas.so.0"
+    )
     assert pkg == "numpy"
     assert prov == "vendored-in-wheel:numpy"
 
     # Windows absolute paths
-    pkg, prov = infer_binary_provenance("C:/Users/alice/repo/scipy/linalg/liblapack.dll", "liblapack.dll")
+    pkg, prov = infer_binary_provenance(
+        "C:/Users/alice/repo/scipy/linalg/liblapack.dll", "liblapack.dll"
+    )
     assert pkg == "scipy"
     assert prov == "vendored-in-wheel:scipy"
 
@@ -657,7 +667,9 @@ def test_workspace_record_c_extension_rejection(tmp_path: Path) -> None:
 
     ws = inspect_workspace(tmp_path)
     # _imaging.cpython-*.so is a C extension, so it should not be registered as a standalone native-library component
-    native_names = [c.name for c in ws.components.values() if c.component_type == ComponentType.NATIVE_LIBRARY]
+    native_names = [
+        c.name for c in ws.components.values() if c.component_type == ComponentType.NATIVE_LIBRARY
+    ]
     assert "_imaging" not in native_names
     assert "_imaging.cpython-312-x86_64-linux-gnu" not in native_names
 
@@ -675,9 +687,13 @@ def test_workspace_delvewheel_manifest_parsing(tmp_path: Path) -> None:
     manifest.write_text("libopenblas-5.dll\nlibgfortran-5.dll\n", encoding="utf-8")
 
     dll1 = scipy_libs / "libopenblas-5.dll"
-    dll1.write_bytes(build_synthetic_pe64(export_dll_name="libopenblas-5.dll", rodata_strings=["OpenBLAS"]))
+    dll1.write_bytes(
+        build_synthetic_pe64(export_dll_name="libopenblas-5.dll", rodata_strings=["OpenBLAS"])
+    )
     dll2 = scipy_libs / "libgfortran-5.dll"
-    dll2.write_bytes(build_synthetic_pe64(export_dll_name="libgfortran-5.dll", rodata_strings=["GCC"]))
+    dll2.write_bytes(
+        build_synthetic_pe64(export_dll_name="libgfortran-5.dll", rodata_strings=["GCC"])
+    )
 
     dist_dir = create_dist_info(
         sp_dir,
@@ -783,10 +799,14 @@ def test_libuuid_lgpl_and_version_normalization(tmp_path: Path) -> None:
     _, det_ver_dotted = _infer_library_identity("libuuid.so.1.3.0", "libuuid.so.1.3.0", [])
     assert det_ver_dotted == "1.3.0"
 
-    _, det_ver_util = _infer_library_identity("libuuid.so.1", "libuuid.so.1", ["util-linux 2.39.3 release banner"])
+    _, det_ver_util = _infer_library_identity(
+        "libuuid.so.1", "libuuid.so.1", ["util-linux 2.39.3 release banner"]
+    )
     assert det_ver_util == "2.39.3"
 
-    _, det_ver_sym = _infer_library_identity("libuuid.so.1", "libuuid.so.1", ["UUID_2.36", "UUID_1.0"])
+    _, det_ver_sym = _infer_library_identity(
+        "libuuid.so.1", "libuuid.so.1", ["UUID_2.36", "UUID_1.0"]
+    )
     assert det_ver_sym == "2.36"
 
     # 2. Test ELF parsing of synthetic libuuid.so.1

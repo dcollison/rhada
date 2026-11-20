@@ -135,14 +135,16 @@ def _build_cyclonedx_licenses(comp: Component) -> list[License]:
 
 def generate_cyclonedx_sbom(report: AuditReport) -> dict[str, Any]:
     """Generate a CycloneDX 1.5 JSON Software Bill of Materials using `cyclonedx-python-lib`."""
-    root_ref = PackageURL(type="generic", name=report.target_name.lower(), version=report.target_version).to_string()
+    root_ref = PackageURL(
+        type="generic", name=report.target_name.lower(), version=report.target_version
+    ).to_string()
     bundled = [c for c in report.components if c.is_bundled]
-    bundled_sorted = sorted(bundled, key=lambda c: (c.name.lower(), c.version, c.component_type.value))
+    bundled_sorted = sorted(
+        bundled, key=lambda c: (c.name.lower(), c.version, c.component_type.value)
+    )
 
     bom = Bom()
-    bom.metadata.tools.tools.add(
-        Tool(vendor="Rhada DevSecOps", name="rhada", version=__version__)
-    )
+    bom.metadata.tools.tools.add(Tool(vendor="Rhada DevSecOps", name="rhada", version=__version__))
     root_component = CdxComponent(
         name=report.target_name,
         version=report.target_version,
@@ -160,7 +162,10 @@ def generate_cyclonedx_sbom(report: AuditReport) -> dict[str, Any]:
     name_to_cdx_comp: dict[str, CdxComponent] = {}
 
     for comp in bundled_sorted:
-        bom_ref = comp.purl or PackageURL(type="generic", name=comp.name.lower(), version=comp.version).to_string()
+        bom_ref = (
+            comp.purl
+            or PackageURL(type="generic", name=comp.name.lower(), version=comp.version).to_string()
+        )
         purl_obj = None
         with contextlib.suppress(ValueError):
             purl_obj = PackageURL.from_string(bom_ref)
@@ -182,18 +187,24 @@ def generate_cyclonedx_sbom(report: AuditReport) -> dict[str, Any]:
         if _is_valid_http_url(comp.homepage):
             with contextlib.suppress(ValueError):
                 ext_refs.append(
-                    ExternalReference(type=ExternalReferenceType.WEBSITE, url=XsUri(comp.homepage.strip()))
+                    ExternalReference(
+                        type=ExternalReferenceType.WEBSITE, url=XsUri(comp.homepage.strip())
+                    )
                 )
         if _is_valid_http_url(comp.source_url) and comp.source_url.strip() != comp.homepage.strip():
             with contextlib.suppress(ValueError):
                 ext_refs.append(
-                    ExternalReference(type=ExternalReferenceType.VCS, url=XsUri(comp.source_url.strip()))
+                    ExternalReference(
+                        type=ExternalReferenceType.VCS, url=XsUri(comp.source_url.strip())
+                    )
                 )
 
         props = [
             Property(name="rhada:component_type", value=comp.component_type.value),
             Property(name="rhada:license_risk", value=comp.license_info.risk_category.value),
-            Property(name="rhada:statically_compiled", value=str(comp.is_statically_compiled).lower()),
+            Property(
+                name="rhada:statically_compiled", value=str(comp.is_statically_compiled).lower()
+            ),
             Property(name="rhada:dynamic_relinking", value=str(comp.has_dynamic_relinking).lower()),
         ]
         if comp.origin_package:
@@ -244,7 +255,9 @@ def generate_cyclonedx_sbom(report: AuditReport) -> dict[str, Any]:
                 from rhada.elf import _strip_wheel_hashes_and_arch
 
                 cleaned_d = _strip_wheel_hashes_and_arch(d)
-                target_cdx = name_to_cdx_comp.get(cleaned_d) or name_to_cdx_comp.get(cleaned_d.lower())
+                target_cdx = name_to_cdx_comp.get(cleaned_d) or name_to_cdx_comp.get(
+                    cleaned_d.lower()
+                )
             if target_cdx and target_cdx != src_cdx and target_cdx not in dep_cdx_list:
                 dep_cdx_list.append(target_cdx)
         for nat_c, nat_cdx in comp_cdx_pairs:
@@ -290,7 +303,7 @@ def generate_cyclonedx_sbom(report: AuditReport) -> dict[str, Any]:
             )
 
     raw_json = JsonV1Dot5(bom).output_as_string()
-    return json.loads(raw_json)
+    return dict(json.loads(raw_json))
 
 
 def _format_spdx_originator(author: str = "") -> str | None:
@@ -319,13 +332,15 @@ def _format_spdx_originator(author: str = "") -> str | None:
             "association",
             "consortium",
         )
-        is_org = any(re.search(rf"\b{re.escape(m)}\b", raw_author, re.IGNORECASE) for m in org_markers)
+        is_org = any(
+            re.search(rf"\b{re.escape(m)}\b", raw_author, re.IGNORECASE) for m in org_markers
+        )
         prefix = "Organization" if is_org else "Person"
         name = raw_author
 
     m_email = re.search(r"<([^>]+)>", name)
     if m_email:
-        clean_name = name[:m_email.start()].strip()
+        clean_name = name[: m_email.start()].strip()
         email = m_email.group(1).strip()
         return f"{prefix}: {clean_name} ({email})" if clean_name else f"{prefix}: ({email})"
     return f"{prefix}: {name}"
@@ -336,7 +351,9 @@ def generate_spdx_sbom(report: AuditReport) -> dict[str, Any]:
     doc_uuid = uuid.uuid4()
     root_spdx_id = "SPDXRef-RootApplication"
     bundled = [c for c in report.components if c.is_bundled]
-    bundled_sorted = sorted(bundled, key=lambda c: (c.name.lower(), c.version, c.component_type.value))
+    bundled_sorted = sorted(
+        bundled, key=lambda c: (c.name.lower(), c.version, c.component_type.value)
+    )
 
     packages: list[dict[str, Any]] = [
         {
@@ -365,7 +382,9 @@ def generate_spdx_sbom(report: AuditReport) -> dict[str, Any]:
     used_spdx_ids: set[str] = {root_spdx_id, "SPDXRef-DOCUMENT"}
 
     for comp in bundled_sorted:
-        base_id = _sanitize_spdx_id(f"Package-{comp.component_type.value}-{comp.name}-{comp.version}")
+        base_id = _sanitize_spdx_id(
+            f"Package-{comp.component_type.value}-{comp.name}-{comp.version}"
+        )
         spdx_id = base_id
         counter = 2
         while spdx_id in used_spdx_ids:
@@ -464,7 +483,9 @@ def generate_spdx_sbom(report: AuditReport) -> dict[str, Any]:
                 from rhada.elf import _strip_wheel_hashes_and_arch
 
                 cleaned_dep = _strip_wheel_hashes_and_arch(dep_name)
-                target_id = name_to_spdx_id.get(cleaned_dep) or name_to_spdx_id.get(cleaned_dep.lower())
+                target_id = name_to_spdx_id.get(cleaned_dep) or name_to_spdx_id.get(
+                    cleaned_dep.lower()
+                )
             if target_id and target_id != src_id:
                 rel = {
                     "spdxElementId": src_id,

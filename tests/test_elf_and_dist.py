@@ -131,7 +131,11 @@ dev = ["pytest>=8.0.0", "nuitka>=2.1.0"]
     sp = ws_dir / ".venv" / "Lib" / "site-packages"
     create_dist_info(sp, "httpx", "0.27.0", license_str="BSD-3-Clause", top_level=["httpx"])
     create_dist_info(
-        sp, "cryptography", "42.0.5", license_expression="Apache-2.0 OR BSD-3-Clause", top_level=["cryptography"]
+        sp,
+        "cryptography",
+        "42.0.5",
+        license_expression="Apache-2.0 OR BSD-3-Clause",
+        top_level=["cryptography"],
     )
     create_dist_info(sp, "pytest", "8.1.1", license_str="MIT", top_level=["pytest"])
     create_dist_info(sp, "nuitka", "2.1.2", license_str="Apache-2.0", top_level=["nuitka"])
@@ -472,7 +476,9 @@ def test_unidentified_version_explicit_unknown() -> None:
     assert rep.target_version == "unknown"
 
     # 5. Native library SONAME libtool ABI .so.0.0.0 is not treated as software version 0.0.0
-    det_lib, det_ver = _infer_library_identity("libquadmath-96973f99.so.0.0.0", "libquadmath.so.0.0.0", [])
+    det_lib, det_ver = _infer_library_identity(
+        "libquadmath-96973f99.so.0.0.0", "libquadmath.so.0.0.0", []
+    )
     assert det_lib == "libquadmath"
     assert det_ver == "unknown"  # Explicitly 'unknown', not '0.0.0'
 
@@ -486,7 +492,11 @@ def test_unidentified_version_explicit_unknown() -> None:
 def test_nuitka_linux_site_packages_and_report_discovery(tmp_path: Path) -> None:
     """Verify Linux absolute paths in site-packages are not misidentified as project modules,
     and report.xml is auto-discovered in dist_path.parent."""
-    from rhada.dist import DistInspectionResult, inspect_compiled_distribution, parse_nuitka_compilation_report
+    from rhada.dist import (
+        DistInspectionResult,
+        inspect_compiled_distribution,
+        parse_nuitka_compilation_report,
+    )
 
     xml_content = """<?xml version='1.0' encoding='utf8'?>
 <nuitka-compilation-report mode="standalone">

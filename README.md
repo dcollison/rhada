@@ -1,12 +1,18 @@
-# Rhada
+# rhada
 
-Rhada is a compliance, Software Bill of Materials (SBOM), binary linkage, and security vulnerability auditor for Python source workspaces and compiled Linux distributions (Nuitka and PyInstaller).
+[![CI](https://github.com/dcollison/rhada/actions/workflows/ci.yml/badge.svg)](https://github.com/dcollison/rhada/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mkdocs--material-blue)](https://dcollison.github.io/rhada/)
+[![PyPI](https://img.shields.io/pypi/v/rhada)](https://pypi.org/project/rhada/)
+[![Python](https://img.shields.io/pypi/pyversions/rhada)](https://pypi.org/project/rhada/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Overview
+Legal compliance, SBOM generation, binary linkage verification, and security vulnerability auditor for Python source workspaces and compiled Nuitka/PyInstaller distributions.
+
+## Features
 
 1. **Dual-Mode Operation**
    - **Source Mode (default when `--dist` is omitted):** Inspects Python source workspaces. Supports modern PEP 621 / `uv` projects (`pyproject.toml`, `uv.lock`) as well as legacy `setuptools` and pip workspaces (`setup.py`, `setup.cfg`, `requirements.txt`). `setup.py` is safely inspected using static Abstract Syntax Tree (AST) parsing without executing untrusted code. Discovers installed package metadata across virtual environments (`.venv`, `venv`, `env`) to separate direct runtime dependencies from development/build tools, extract SPDX licence metadata, and check for security advisories.
-   - **Compiled Distribution Mode (`--dist <path>`):** Audits Nuitka and PyInstaller artefacts, including standalone directories (`app.dist/`, `dist/app/`) and monolithic single-file binaries (`app.bin`). Identifies bundled Python modules (excluding build and test tools such as `pytest`, `ruff`, `mypy`, `nuitka`, and `pyinstaller`), inspects bundled native shared libraries (`.so`), and verifies ELF dynamic linkage.
+   - **Compiled Distribution Mode (`--dist <path>`):** Audits Nuitka and PyInstaller artefacts, including standalone directories (`app.dist/`, `dist/app/`) and monolithic single-file binaries (`app.bin`). Identifies bundled Python modules (excluding build and test tools such as `pytest`, `ruff`, `mypy`, `nuitka`, and `pyinstaller`), inspects bundled native shared libraries (`.so`, `.dll`, `.pyd`), and verifies ELF/PE dynamic linkage.
 
 2. **Legal and Licence Compliance**
    - Parses and normalises `METADATA` licence headers, PEP 639 `License-Expression` fields, Trove classifiers, and verbatim licence texts into canonical SPDX identifiers and compound expressions (`MIT OR Apache-2.0`, `GPL-2.0-only AND BSD-3-Clause`) using `license-expression`.
@@ -15,14 +21,14 @@ Rhada is a compliance, Software Bill of Materials (SBOM), binary linkage, and se
      - Detects LGPL relinking issues (`LIC-LGPL-MONOLITHIC`) when weak-copyleft libraries are statically compiled or embedded into monolithic binaries without dynamic `.so` relinking support.
    - Generates a `THIRD_PARTY_NOTICES` attribution file containing component inventory, copyright notices, `NOTICE` / `AUTHORS` files, and verbatim licence texts.
 
-3. **ELF Binary and Native Library Inspection**
-   - Parses 32-bit and 64-bit ELF executables and `.so` libraries via `pyelftools` with a `struct` fallback for stripped or header-truncated binaries.
+3. **ELF and PE Binary Inspection**
+   - Parses 32-bit and 64-bit ELF executables and `.so` libraries via `pyelftools` with a `struct` fallback for stripped or header-truncated binaries, as well as Windows PE binaries (`.dll`, `.pyd`, `.exe`).
    - Extracts `DT_NEEDED`, `DT_SONAME`, `DT_RPATH`, `DT_RUNPATH`, `PT_INTERP`, exported symbols (`PyInit_*`, `modulecode_*`), and embedded library version strings (`OpenSSL`, `zlib`, `SQLite`, `libffi`, `gmp`, `readline`, etc.).
    - Verifies whether each `DT_NEEDED` shared library is resolved within the distribution, satisfied by the baseline Linux/glibc ABI, or missing as an unbundled external dependency, and flags insecure RPATH/RUNPATH tokens.
 
 4. **Security Vulnerability Auditing**
    - Integrates `pip-audit` (`OsvService` and `ResolvedDependency`) alongside the OSV.dev batch API (`/v1/querybatch`) and advisory endpoints (`/v1/vulns/{id}`) for discovered Python packages and versioned native libraries.
-   - Calculates CVSS v3.0/v3.1 base scores using `cvss` and summarises findings by severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) with fixed version recommendations.
+   - Calculates CVSS v3.0/v3.1/v4.0 base scores using `cvss` and summarises findings by severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) with fixed version recommendations.
 
 5. **Standards-Compliant SBOMs and CLI Exit Codes**
    - Generates **CycloneDX 1.5 JSON** (via `cyclonedx-python-lib` and `packageurl-python`) and **SPDX 2.3 JSON** SBOMs.
@@ -30,29 +36,31 @@ Rhada is a compliance, Software Bill of Materials (SBOM), binary linkage, and se
 
 ## Installation
 
-Manage and install with [`uv`](https://docs.astral.sh/uv/):
+Install using `uv` (recommended):
 
 ```bash
-# Install dependencies and synchronise virtual environment
-uv sync
+uv add rhada
+```
 
-# Run via uv
-uv run rhada --help
+Or using `pip`:
+
+```bash
+pip install rhada
 ```
 
 ### Pre-Commit Hook Integration
 
-Add Rhada to your `.pre-commit-config.yaml` to audit source workspaces automatically before each commit:
+Add `rhada` to your `.pre-commit-config.yaml` to audit source workspaces automatically before each commit:
 
 ```yaml
 repos:
   - repo: https://github.com/dcollison/rhada
-    rev: v0.1.0
+    rev: v0.1.2
     hooks:
       - id: rhada
 ```
 
-## CLI Usage
+## Quickstart
 
 ### 1. Audit a Python / `uv` Source Workspace
 
@@ -79,11 +87,12 @@ uv run rhada --project . --dist ./dist/app-linux-x86_64 \
   --notices dist/THIRD_PARTY_NOTICES
 ```
 
-### 3. Policy Controls, Internal Packages, and `pyproject.toml` Configuration
+## Policy Controls and Configuration
 
-Rhada supports turnkey policy configuration via CLI options or centrally via `[tool.rhada]` in your `pyproject.toml`:
+Rhada supports turnkey policy configuration via CLI options or centrally via `[tool.rhada]` in your `pyproject.toml`.
 
-#### Internal Package Whitelisting (`--internal-package` / `--allow-package`)
+### Internal Package Whitelisting (`--internal-package` / `--allow-package`)
+
 For projects utilizing in-house or corporate packages (e.g. from private registries or monorepos):
 - Matching packages are treated as **first-party organization code**.
 - Exempt from third-party license compliance checks (`LIC-UNKNOWN`, `LIC-PROPRIETARY`, `LIC-POLICY-NOT-ALLOWED`).
@@ -96,28 +105,31 @@ For projects utilizing in-house or corporate packages (e.g. from private registr
 uv run rhada --project . --internal-package "mycorp-*,internal-auth"
 ```
 
-#### Ignoring Dependencies (`--ignore-package`)
+### Ignoring Dependencies (`--ignore-package`)
+
 To completely omit specific packages from audit findings:
+
 ```bash
 uv run rhada --project . --ignore-package "legacy-test-tool,mock-*"
 ```
 
-#### Approved Licences (`--allow-licence` vs `--allow-extra-licence`)
-- **`--allow-licence` / `--allow-license` (Strict Whitelist)**:
-  Enforces a strict, closed-world allowlist. **Only** the explicitly listed licences are approved. Any package whose licence is not in this list (including standard permissive licences like `MIT` or `Apache-2.0`) will be flagged as unapproved (`LIC-POLICY-NOT-ALLOWED`).
+### Approved Licences (`--allow-licence` vs `--allow-extra-licence`)
+
+- **`--allow-licence` / `--allow-license` (Strict Whitelist):** Enforces a strict, closed-world allowlist. **Only** the explicitly listed licences are approved. Any package whose licence is not in this list (including standard permissive licences like `MIT` or `Apache-2.0`) will be flagged as unapproved (`LIC-POLICY-NOT-ALLOWED`).
+
   ```bash
-  # Enforce that only these exact licences are legally approved across the entire project
   uv run rhada --project . \
     --allow-licence "MIT,Apache-2.0,BSD-3-Clause,0BSD,LicenseRef-AcmeCorp,Proprietary"
   ```
-- **`--allow-extra-licence` / `--allow-extra-license` (Supplemental Allowlist)**:
-  Similar to `--extra-index-url` in pip/uv, this flag **supplements** the default permissive baseline rather than replacing it. It permits specific additional or custom/proprietary licences (e.g. `Proprietary`, `LicenseRef-Corporate`, or commercial SDKs) without requiring you to enumerate every common open-source licence (`MIT`, `Apache-2.0`, etc.).
+
+- **`--allow-extra-licence` / `--allow-extra-license` (Supplemental Allowlist):** Similar to `--extra-index-url` in pip/uv, this flag **supplements** the default permissive baseline rather than replacing it. It permits specific additional or custom/proprietary licences (e.g. `Proprietary`, `LicenseRef-Corporate`, or commercial SDKs) without requiring you to enumerate every common open-source licence.
+
   ```bash
-  # Permit a specific proprietary or internal licence while keeping standard open-source licences allowed
   uv run rhada --project . --allow-extra-licence "Proprietary,LicenseRef-Custom"
   ```
 
-#### Declarative Configuration in `pyproject.toml`
+### Declarative Configuration in `pyproject.toml`
+
 All policy rules and operational defaults can be declared in `[tool.rhada]`:
 
 ```toml
@@ -167,51 +179,45 @@ offline = false
 "proprietary-sdk" = "Copyright (c) 2026 Acme Corp. All rights reserved."
 ```
 
-#### Ignoring Specific Vulnerabilities (`--ignore-vulnerability`)
+### Ignoring Specific Vulnerabilities (`--ignore-vulnerability`)
+
 If an upstream dependency has an advisory that is not exploitable in your application or has no patch available yet, ignore specific IDs without disabling checks for the rest of the package:
+
 ```bash
 uv run rhada --project . --ignore-vulnerability "CVE-2024-99999,GHSA-34jh-p97f-mpxf"
 ```
 
-#### Licence Text Overrides (`--license-file` and `[tool.rhada.license-files]`)
+### Licence Text Overrides (`--license-file` and `[tool.rhada.license-files]`)
+
 When an open-source wheel omits a verbatim `LICENSE` file (triggering `LIC-MISSING-TEXT`), provide a local file or inline text to satisfy attribution requirements:
+
 ```bash
 uv run rhada --project . --license-file "legacy-lib=licenses/legacy-lib.txt"
 ```
 
 CLI flags supplement and take precedence over `pyproject.toml` settings.
 
-### 4. LGPL Source Code Links and Compliance Offers
+### LGPL Source Code Links and Compliance Offers
 
 For packages governed by the GNU Lesser General Public License (LGPL-2.0, LGPL-2.1, LGPL-3.0), Section 4(d) / Section 6 requires that recipients have access to complete corresponding source code and retain the ability to modify and relink the library:
 - Rhada resolves upstream repository and release source URLs from package `Project-URL` metadata, PyPI files, or native library registries.
 - Discovered source links are included directly in `LIC-LGPL-DYNAMIC` and `LIC-LGPL-MONOLITHIC` compliance findings and embedded into CycloneDX (`vcs`) and SPDX (`downloadLocation`) SBOMs.
 - `THIRD_PARTY_NOTICES` includes a dedicated **LGPL Compliance & Source Code Offer** section providing exact source code download locations and written offer statements.
 
-### 5. Distribution File Accounting & Inventory (`--verbose` / `--full`)
+### Distribution File Accounting & Inventory (`--verbose` / `--full`)
 
 When auditing a compiled distribution directory (`--dist`), Rhada performs full file inventory accounting to verify that every distributed file is attributed and accounted for:
-- **Application Binaries (`application-binary`)**: Main entrypoint executables and first-party compiled modules. First-party packages and submodules (configured in `pyproject.toml` or discovered in the source tree) are properly recognized as project source rather than flagged as unknown third-party packages.
-- **Python Runtime (`python-runtime`)**: CPython runtime shared libraries (`python313.dll`, `libpython3.so`) and standard library C-extensions (`select.pyd`, `_socket.pyd`, etc., licensed under `PSF-2.0`).
-- **Compiler / Platform ABI (`compiler-abi`)**: Standard compiler runtimes and platform ABIs (`vcruntime140.dll`, `msvcp140.dll`, `ucrtbase.dll`, `libc.so`, etc.).
-- **Native Shared Libraries (`native-library`)**: Discovered or vendored third-party shared libraries (`libcrypto`, `libssl`, `libopenblas`, etc.).
-- **Python Packages (`python-package`)**: Bundled third-party wheels, bytecode, and extension libraries.
-- **Metadata (`data-metadata`)**: Compilation reports, license files, notices, SBOMs, and manifest files.
-- **Unaccounted Files (`unaccounted`)**: Any unrecognized loose file that may require audit or review.
+- **Application Binaries (`application-binary`):** Main entrypoint executables and first-party compiled modules.
+- **Python Runtime (`python-runtime`):** CPython runtime shared libraries and standard library C-extensions (`PSF-2.0`).
+- **Compiler / Platform ABI (`compiler-abi`):** Standard compiler runtimes and platform ABIs (`vcruntime140.dll`, `libc.so`, etc.).
+- **Native Shared Libraries (`native-library`):** Discovered or vendored third-party shared libraries (`libcrypto`, `libssl`, `libopenblas`, etc.).
+- **Python Packages (`python-package`):** Bundled third-party wheels, bytecode, and extension libraries.
+- **Metadata (`data-metadata`):** Compilation reports, license files, notices, SBOMs, and manifest files.
+- **Unaccounted Files (`unaccounted`):** Any unrecognized loose file that may require audit or review.
 
-By default, the audit summary reports the overall coverage percentage:
-```text
-Distribution File Coverage: 100.0% (32/32 files classified: 1 application binary, 25 python runtime, 4 compiler abi, 2 data metadata)
-```
+Pass `--verbose` (or `-v`, `--full`) to render the complete line-by-line inventory table and serialize `file_inventory` in JSON reports.
 
-Pass `--verbose` (or `-v`, `--full`) to render the complete line-by-line inventory table detailing the relative file path, category, attributed component, file size, SHA-256 hash, and classification details:
-```bash
-uv run rhada --project . --dist ./dist/my-app.dist --compilation-report ./dist/report.xml --verbose
-```
-
-The complete inventory is also serialized under `file_inventory` in JSON reports (`--format json` or `--report-json`).
-
-### 6. Subcommands
+### Subcommands
 
 ```bash
 # Generate SBOM to stdout or file
@@ -225,7 +231,7 @@ uv run rhada notices --project . --format markdown --output THIRD_PARTY_NOTICES.
 uv run rhada diff base-report.json new-report.json
 uv run rhada diff base-sbom.json new-sbom.json --fail-on-new-vuln --fail-on-downgrade
 
-# Inspect ELF binaries and DT_NEEDED linkage directly
+# Inspect ELF/PE binaries and DT_NEEDED linkage directly
 uv run rhada inspect-elf ./build/app.dist
 ```
 
@@ -302,7 +308,7 @@ Running `rhada [OPTIONS]` directly defaults to the `audit` command.
 | | `--fail-on-changes` | | *flag* | `false` | Fail with exit code 1 if any dependency, version, or licence changed. |
 | `inspect-elf` / `inspect-binary` | `TARGET` | | `PATH` *(arg)* | *(required)* | Target ELF/PE binary (`.so`, `.dll`, `.pyd`, `.exe`) or distribution directory to inspect for dependencies and dynamic linkage. |
 
-## Exit Codes
+### Exit Codes
 
 | Exit Code | Enum Name | Meaning |
 | :---: | :--- | :--- |
@@ -321,7 +327,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v5
       - name: Run Rhada Audit and Generate Release Artefacts
         run: |
           uv run rhada audit \
@@ -342,10 +348,38 @@ jobs:
 >
 > 1. **No Legal Counsel**: The licence classifications, risk categorisations, compliance findings, and attribution files generated by Rhada are automated heuristics based on metadata and static file inspection. They do not constitute legal advice and do not establish an attorney-client relationship.
 > 2. **No Compliance Warranty**: Upstream metadata in open-source packages may be incomplete, inaccurate, or outdated. Software distributors are solely responsible for verifying their own legal obligations and should consult qualified legal counsel for binding compliance determinations.
-> 3. **Limitation of Liability**: In accordance with the project licence (Apache-2.0, Sections 7 and 8), Rhada is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND. The contributors and maintainers cannot be held liable for any damages, legal actions, or compliance failures arising from the use of this software.
+> 3. **Limitation of Liability**: In accordance with the project licence ([MIT](LICENSE)), Rhada is provided "AS IS", WITHOUT WARRANTY OF ANY KIND. The contributors and maintainers cannot be held liable for any damages, legal actions, or compliance failures arising from the use of this software.
 
-## Running Tests
+## Documentation
+
+Full documentation, guides, and API references are published at [https://dcollison.github.io/rhada/](https://dcollison.github.io/rhada/).
+
+To preview documentation locally:
 
 ```bash
-uv run pytest -v
+uv run --group docs mkdocs serve
 ```
+
+## Development
+
+Synchronise the environment with all development and documentation groups, then run linting, formatting, type checking, and tests:
+
+```bash
+uv sync --all-groups
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+uv run pytest -v
+uv run --group docs mkdocs build --strict
+```
+
+## Releasing
+
+Releases are published automatically to PyPI via Trusted Publishing (OIDC) when a GitHub Release is published (`.github/workflows/release.yml`):
+
+1. Update the version in `pyproject.toml`, `src/rhada/__init__.py`, `uv.lock`, and `CHANGELOG.md`.
+2. Tag and push `vX.Y.Z`, then publish the GitHub Release.
+
+## License
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
