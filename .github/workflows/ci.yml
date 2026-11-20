@@ -83,7 +83,7 @@ jobs:
         run: uv sync --frozen --group docs
 
       - name: Build documentation in strict mode
-        run: uv run --group docs mkdocs build --strict
+        run: uv run --frozen --group docs mkdocs build --strict
 
   package-check:
     name: Verify Package Build
