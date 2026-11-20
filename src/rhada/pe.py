@@ -251,8 +251,8 @@ def parse_pe_bytes(raw_bytes: bytes, path_str: str = "<memory>") -> ElfBinaryInf
     (e_lfanew,) = struct.unpack_from("<I", raw_bytes, 0x3C)
     coff_off = e_lfanew + 4
 
-    machine, num_sections, _timestamp, _sym_ptr, _num_syms, opt_hdr_size, characteristics = struct.unpack_from(
-        "<HHIIIHH", raw_bytes, coff_off
+    machine, num_sections, _timestamp, _sym_ptr, _num_syms, opt_hdr_size, characteristics = (
+        struct.unpack_from("<HHIIIHH", raw_bytes, coff_off)
     )
     arch = PE_MACHINE_MAP.get(machine, f"unknown(0x{machine:04x})")
     is_dll = bool(characteristics & IMAGE_FILE_DLL)
@@ -317,7 +317,9 @@ def parse_pe_bytes(raw_bytes: bytes, path_str: str = "<memory>") -> ElfBinaryInf
             for _ in range(512):
                 if pos + 20 > len(raw_bytes):
                     break
-                orig_thunk, _ts, _fwd, name_rva, first_thunk = struct.unpack_from("<IIIII", raw_bytes, pos)
+                orig_thunk, _ts, _fwd, name_rva, first_thunk = struct.unpack_from(
+                    "<IIIII", raw_bytes, pos
+                )
                 if orig_thunk == 0 and name_rva == 0 and first_thunk == 0:
                     break
                 name_off = rva_to_offset(name_rva)
@@ -395,7 +397,11 @@ def parse_pe_bytes(raw_bytes: bytes, path_str: str = "<memory>") -> ElfBinaryInf
                         sname = _read_c_string(raw_bytes, sym_off, max_len=256)
                         if not sname:
                             continue
-                        clean_sname = sname.lstrip("_") if sname.startswith(("_PyInit_", "_modulecode_")) else sname
+                        clean_sname = (
+                            sname.lstrip("_")
+                            if sname.startswith(("_PyInit_", "_modulecode_"))
+                            else sname
+                        )
                         if clean_sname.startswith(("PyInit_", "modulecode_")):
                             priority_exports.append(clean_sname)
                         elif len(other_exports) < 120:
@@ -415,7 +421,11 @@ def parse_pe_bytes(raw_bytes: bytes, path_str: str = "<memory>") -> ElfBinaryInf
     utf16_strings = extract_utf16le_strings(raw_bytes, limit=400)
     combined_strings = ascii_strings + utf16_strings
 
-    from rhada.elf import _infer_library_identity, _match_known_native_profile, infer_binary_provenance
+    from rhada.elf import (
+        _infer_library_identity,
+        _match_known_native_profile,
+        infer_binary_provenance,
+    )
 
     fname = Path(path_str.replace("\\", "/")).name
     lib_name, lib_ver = _infer_library_identity(fname, soname, combined_strings)

@@ -1,4 +1,3 @@
-
 """Core orchestrator for Rhada source-workspace and compiled-distribution audits."""
 
 from __future__ import annotations
@@ -43,7 +42,9 @@ def compute_exit_code(report: AuditReport, config: AuditConfig) -> ExitCode:
         for v in report.all_vulnerabilities
         if not v.is_ignored
     )
-    has_license_failure = any(f.severity.meets_threshold(config.fail_on_license) for f in report.compliance_findings)
+    has_license_failure = any(
+        f.severity.meets_threshold(config.fail_on_license) for f in report.compliance_findings
+    )
 
     if has_vuln_failure and has_license_failure:
         return ExitCode.COMBINED_POLICY_FAILURE
@@ -52,7 +53,11 @@ def compute_exit_code(report: AuditReport, config: AuditConfig) -> ExitCode:
     if has_license_failure:
         return ExitCode.LICENSE_FAILURE
 
-    if config.fail_on_linkage and report.linkage_report is not None and not report.linkage_report.is_self_contained:
+    if (
+        config.fail_on_linkage
+        and report.linkage_report is not None
+        and not report.linkage_report.is_self_contained
+    ):
         return ExitCode.LINKAGE_FAILURE
 
     return ExitCode.OK
@@ -81,9 +86,13 @@ def run_audit(
         if "allowed_licenses" in tool_cfg:
             config.allowed_licenses = set(config.allowed_licenses) | tool_cfg["allowed_licenses"]
         if "extra_allowed_licenses" in tool_cfg:
-            config.extra_allowed_licenses = set(config.extra_allowed_licenses) | tool_cfg["extra_allowed_licenses"]
+            config.extra_allowed_licenses = (
+                set(config.extra_allowed_licenses) | tool_cfg["extra_allowed_licenses"]
+            )
         if "ignore_vulnerabilities" in tool_cfg:
-            config.ignore_vulnerabilities = set(config.ignore_vulnerabilities) | tool_cfg["ignore_vulnerabilities"]
+            config.ignore_vulnerabilities = (
+                set(config.ignore_vulnerabilities) | tool_cfg["ignore_vulnerabilities"]
+            )
         if "ignore_vulnerability_details" in tool_cfg:
             config.ignore_vulnerability_details.update(tool_cfg["ignore_vulnerability_details"])
         if "license_files" in tool_cfg:
@@ -216,14 +225,21 @@ def run_audit(
     # Apply licence text overrides (from [tool.rhada.license-files] and [tool.rhada.license-texts])
     if config.license_files or config.license_texts:
         from pathlib import Path
+
         for c in (*report.components, *report.excluded_components):
             c_name_norm = c.name.lower().replace("_", "-")
             for target_name, rel_path in config.license_files.items():
                 if target_name.lower().replace("_", "-") == c_name_norm:
-                    file_path = (project_path / rel_path) if not Path(rel_path).is_absolute() else Path(rel_path)
+                    file_path = (
+                        (project_path / rel_path)
+                        if not Path(rel_path).is_absolute()
+                        else Path(rel_path)
+                    )
                     if file_path.is_file():
                         with contextlib.suppress(OSError):
-                            c.license_info.license_texts[file_path.name] = file_path.read_text(encoding="utf-8", errors="replace")
+                            c.license_info.license_texts[file_path.name] = file_path.read_text(
+                                encoding="utf-8", errors="replace"
+                            )
             for target_name, raw_text in config.license_texts.items():
                 if target_name.lower().replace("_", "-") == c_name_norm:
                     c.license_info.license_texts["LICENSE"] = raw_text
@@ -246,7 +262,9 @@ def run_audit(
     if config.ignore_vulnerabilities:
         for v in report.all_vulnerabilities:
             v_id_upper = v.id.upper()
-            is_ign = v_id_upper in config.ignore_vulnerabilities or any(a.upper() in config.ignore_vulnerabilities for a in v.aliases)
+            is_ign = v_id_upper in config.ignore_vulnerabilities or any(
+                a.upper() in config.ignore_vulnerabilities for a in v.aliases
+            )
             if is_ign:
                 v.is_ignored = True
                 details = config.ignore_vulnerability_details.get(v_id_upper)

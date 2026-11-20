@@ -170,27 +170,97 @@ def build_synthetic_elf64(
     shdrs: list[bytes] = []
     shdrs.append(b"\x00" * 64)  # 0: SHT_NULL
     shdrs.append(
-        struct.pack("<IIQQQQIIQQ", sh_dynstr_name, 3, 2, dynstr_offset, dynstr_offset, len(dynstr), 0, 0, 1, 0)
+        struct.pack(
+            "<IIQQQQIIQQ",
+            sh_dynstr_name,
+            3,
+            2,
+            dynstr_offset,
+            dynstr_offset,
+            len(dynstr),
+            0,
+            0,
+            1,
+            0,
+        )
     )
     if not static_only:
         shdrs.append(
             struct.pack(
-                "<IIQQQQIIQQ", sh_dynamic_name, 6, 3, dynamic_offset, dynamic_offset, len(dynamic_sec), 1, 0, 8, 16
+                "<IIQQQQIIQQ",
+                sh_dynamic_name,
+                6,
+                3,
+                dynamic_offset,
+                dynamic_offset,
+                len(dynamic_sec),
+                1,
+                0,
+                8,
+                16,
             )
         )
     shdrs.append(
-        struct.pack("<IIQQQQIIQQ", sh_dynsym_name, 11, 2, dynsym_offset, dynsym_offset, len(dynsym_sec), 1, 1, 8, 24)
+        struct.pack(
+            "<IIQQQQIIQQ",
+            sh_dynsym_name,
+            11,
+            2,
+            dynsym_offset,
+            dynsym_offset,
+            len(dynsym_sec),
+            1,
+            1,
+            8,
+            24,
+        )
     )
     shdrs.append(
-        struct.pack("<IIQQQQIIQQ", sh_rodata_name, 1, 2, rodata_offset, rodata_offset, len(rodata_sec), 0, 0, 4, 0)
+        struct.pack(
+            "<IIQQQQIIQQ",
+            sh_rodata_name,
+            1,
+            2,
+            rodata_offset,
+            rodata_offset,
+            len(rodata_sec),
+            0,
+            0,
+            4,
+            0,
+        )
     )
     if interp_bytes:
         shdrs.append(
-            struct.pack("<IIQQQQIIQQ", sh_interp_name, 1, 2, interp_offset, interp_offset, len(interp_bytes), 0, 0, 1, 0)
+            struct.pack(
+                "<IIQQQQIIQQ",
+                sh_interp_name,
+                1,
+                2,
+                interp_offset,
+                interp_offset,
+                len(interp_bytes),
+                0,
+                0,
+                1,
+                0,
+            )
         )
     shstrndx = len(shdrs)
     shdrs.append(
-        struct.pack("<IIQQQQIIQQ", sh_shstrtab_name, 3, 0, shstrtab_offset, shstrtab_offset, len(shstrtab), 0, 0, 1, 0)
+        struct.pack(
+            "<IIQQQQIIQQ",
+            sh_shstrtab_name,
+            3,
+            0,
+            shstrtab_offset,
+            shstrtab_offset,
+            len(shstrtab),
+            0,
+            0,
+            1,
+            0,
+        )
     )
 
     e_type = 2 if is_executable else 3  # ET_EXEC (2) or ET_DYN (3)
@@ -366,7 +436,9 @@ def build_synthetic_pe64(
     opt_fixed = bytearray(112)
     struct.pack_into("<H", opt_fixed, 0, 0x20B)  # PE32+ magic
     struct.pack_into("<I", opt_fixed, 16, sec_rva)  # AddressOfEntryPoint
-    struct.pack_into("<Q", opt_fixed, 24, 0x140000000 if is_executable else 0x180000000)  # ImageBase
+    struct.pack_into(
+        "<Q", opt_fixed, 24, 0x140000000 if is_executable else 0x180000000
+    )  # ImageBase
     struct.pack_into("<I", opt_fixed, 32, 0x1000)  # SectionAlignment
     struct.pack_into("<I", opt_fixed, 36, 0x200)  # FileAlignment
     struct.pack_into("<I", opt_fixed, 56, sec_rva + len(sec_buf))  # SizeOfImage
@@ -479,7 +551,9 @@ def create_dist_info(
         f"Author: {author}",
     ]
     if license_str:
-        formatted_lic = "\n       ".join(line if line.strip() else "." for line in license_str.splitlines())
+        formatted_lic = "\n       ".join(
+            line if line.strip() else "." for line in license_str.splitlines()
+        )
         meta_lines.append(f"License: {formatted_lic}")
     if license_expression:
         meta_lines.append(f"License-Expression: {license_expression}")

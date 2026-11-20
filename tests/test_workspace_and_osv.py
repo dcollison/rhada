@@ -88,7 +88,9 @@ source = { registry = "https://pypi.org/simple" }
         license_str="Apache-2.0",
         requires_dist=["urllib3>=1.21.1"],
         top_level=["requests"],
-        license_files={"LICENSE": "Apache License\nVersion 2.0, January 2004\nCopyright 2023 Kenneth Reitz"},
+        license_files={
+            "LICENSE": "Apache License\nVersion 2.0, January 2004\nCopyright 2023 Kenneth Reitz"
+        },
     )
     create_dist_info(
         site_packages,
@@ -157,7 +159,9 @@ def test_cvss_v3_calculator_and_osv_parsing() -> None:
                 ],
             }
         ],
-        "references": [{"type": "ADVISORY", "url": "https://osv.dev/vulnerability/GHSA-xxxx-yyyy-zzzz"}],
+        "references": [
+            {"type": "ADVISORY", "url": "https://osv.dev/vulnerability/GHSA-xxxx-yyyy-zzzz"}
+        ],
     }
     vuln = parse_osv_vulnerability(raw_advisory, "demo-pkg", "2.3.0")
     assert vuln.id == "GHSA-xxxx-yyyy-zzzz"
@@ -187,11 +191,18 @@ def test_osv_client_batch_and_hydration() -> None:
                     "id": "PYSEC-2024-101",
                     "summary": "Header injection in urllib3",
                     "aliases": ["CVE-2024-12345"],
-                    "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N"}],
+                    "severity": [
+                        {"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N"}
+                    ],
                     "affected": [
                         {
                             "package": {"name": "urllib3", "ecosystem": "PyPI"},
-                            "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.0.8"}]}],
+                            "ranges": [
+                                {
+                                    "type": "ECOSYSTEM",
+                                    "events": [{"introduced": "0"}, {"fixed": "2.0.8"}],
+                                }
+                            ],
                         }
                     ],
                 },
@@ -217,14 +228,20 @@ def test_osv_client_batch_and_hydration() -> None:
 
 def test_pip_audit_service_integration() -> None:
     from packaging.version import Version
-    from pip_audit._service.interface import ResolvedDependency, VulnerabilityID, VulnerabilityResult
+    from pip_audit._service.interface import (
+        ResolvedDependency,
+        VulnerabilityID,
+        VulnerabilityResult,
+    )
     from pip_audit._service.osv import OsvService
 
     class StubPipAuditOsvService(OsvService):
         def __init__(self) -> None:
             pass
 
-        def query(self, spec: ResolvedDependency) -> tuple[ResolvedDependency, list[VulnerabilityResult]]:  # type: ignore[override]
+        def query(
+            self, spec: ResolvedDependency
+        ) -> tuple[ResolvedDependency, list[VulnerabilityResult]]:  # type: ignore[override]
             if spec.canonical_name == "requests":
                 return (
                     spec,
@@ -256,7 +273,9 @@ def test_pip_audit_service_integration() -> None:
                 json={
                     "id": "PYSEC-2023-74",
                     "summary": "Unintended leak of Proxy-Authorization header in requests",
-                    "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N"}],
+                    "severity": [
+                        {"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N"}
+                    ],
                 },
             )
         if request.url.path == "/v1/querybatch":
@@ -278,8 +297,12 @@ def test_pip_audit_service_integration() -> None:
             )
         return httpx.Response(404)
 
-    py_comp = Component(name="requests", version="2.30.0", component_type=ComponentType.PYTHON_PACKAGE)
-    nat_comp = Component(name="openssl", version="3.0.12", component_type=ComponentType.NATIVE_LIBRARY)
+    py_comp = Component(
+        name="requests", version="2.30.0", component_type=ComponentType.PYTHON_PACKAGE
+    )
+    nat_comp = Component(
+        name="openssl", version="3.0.12", component_type=ComponentType.NATIVE_LIBRARY
+    )
     osv_hydrated = OsvClient(
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
         pip_audit_service=StubPipAuditOsvService(),
@@ -465,7 +488,9 @@ allowed-licenses = ["MIT"]
     sp = ws / ".venv" / "Lib" / "site-packages"
     create_dist_info(sp, "clean-pkg", "1.0.0", license_str="MIT", top_level=["clean_pkg"])
     create_dist_info(sp, "corp-auth", "2.0.0", license_str="Proprietary", top_level=["corp_auth"])
-    create_dist_info(sp, "legacy-tool", "0.5.0", license_str="GPL-3.0-only", top_level=["legacy_tool"])
+    create_dist_info(
+        sp, "legacy-tool", "0.5.0", license_str="GPL-3.0-only", top_level=["legacy_tool"]
+    )
 
     config = AuditConfig(project_path=ws, offline=True)
     report = run_audit(config)

@@ -284,6 +284,9 @@ def parse_nuitka_compilation_report(xml_path: Path, result: DistInspectionResult
         result.warnings.append(f"Failed to parse Nuitka compilation report {xml_path}: {exc}")
         return
 
+    if root is None:
+        return
+
     result.bundler_type = BundlerType.NUITKA
 
     # 1. Extract <module name="..." kind="..." distribution="...">
@@ -303,7 +306,11 @@ def parse_nuitka_compilation_report(xml_path: Path, result: DistInspectionResult
         usage = (mod_elem.get("usage") or "").lower()
 
         # Identify first-party project source code
-        is_site_packages = "${sys." in source_path or "site-packages" in source_path or "dist-packages" in source_path
+        is_site_packages = (
+            "${sys." in source_path
+            or "site-packages" in source_path
+            or "dist-packages" in source_path
+        )
         is_project_code = usage == "root_module" or (
             not is_site_packages
             and not dist_attr
@@ -355,7 +362,9 @@ def parse_pyinstaller_carchive_toc(binary_bytes: bytes) -> list[tuple[str, str]]
 
     if remaining >= 88:
         try:
-            _, pkg_len, toc_off_u, toc_len_i, _pyver, _ = struct.unpack_from("!8sIIii64s", binary_bytes, idx)
+            _, pkg_len, toc_off_u, toc_len_i, _pyver, _ = struct.unpack_from(
+                "!8sIIii64s", binary_bytes, idx
+            )
             cookie_end = idx + 88
             archive_start = cookie_end - pkg_len
             if (
@@ -390,7 +399,9 @@ def parse_pyinstaller_carchive_toc(binary_bytes: bytes) -> list[tuple[str, str]]
         end = toc_offset + toc_len
         while pos + 18 <= end:
             try:
-                (entry_len, _, _, _, _, typecode_b) = struct.unpack_from("!iIIIBc", binary_bytes, pos)
+                (entry_len, _, _, _, _, typecode_b) = struct.unpack_from(
+                    "!iIIIBc", binary_bytes, pos
+                )
             except struct.error:
                 break
             if entry_len < 18 or pos + entry_len > end:
@@ -428,7 +439,12 @@ def _inspect_binary_payload_strings(
 
     joined = "\n".join(strings_list)
 
-    if PYI_MAGIC in raw_bytes or "pyi-runtime-tmpdir" in joined or "MEIPASS" in joined or "pyimod0" in joined:
+    if (
+        PYI_MAGIC in raw_bytes
+        or "pyi-runtime-tmpdir" in joined
+        or "MEIPASS" in joined
+        or "pyimod0" in joined
+    ):
         result.bundler_type = BundlerType.PYINSTALLER
 
     if (
@@ -497,7 +513,9 @@ def _inspect_binary_payload_strings(
                     )
             # Check for Python C-extension (.pyd, .cpython-*.so, .abi3.so) inside TOC
             elif not in_libs_dir and (
-                lower_fname.endswith(".pyd") or ".cpython-" in lower_fname or ".abi3.so" in lower_fname
+                lower_fname.endswith(".pyd")
+                or ".cpython-" in lower_fname
+                or ".abi3.so" in lower_fname
             ):
                 ext_name = extract_extension_module_name(fname)
                 if "/" in norm_path:
@@ -505,7 +523,9 @@ def _inspect_binary_payload_strings(
                     if pkg_parts:
                         _record_module_file(result, pkg_parts[0], f"{binary_path}!{entry_name}")
                         for i in range(2, len(pkg_parts) + 1):
-                            _record_module_file(result, ".".join(pkg_parts[:i]), f"{binary_path}!{entry_name}")
+                            _record_module_file(
+                                result, ".".join(pkg_parts[:i]), f"{binary_path}!{entry_name}"
+                            )
                         if ext_name:
                             full_ext = f"{'.'.join(pkg_parts)}.{ext_name}"
                             _record_module_file(result, full_ext, f"{binary_path}!{entry_name}")
@@ -522,18 +542,26 @@ def _inspect_binary_payload_strings(
                     if pkg_parts:
                         _record_module_file(result, pkg_parts[0], f"{binary_path}!{entry_name}")
                         for i in range(2, len(pkg_parts) + 1):
-                            _record_module_file(result, ".".join(pkg_parts[:i]), f"{binary_path}!{entry_name}")
+                            _record_module_file(
+                                result, ".".join(pkg_parts[:i]), f"{binary_path}!{entry_name}"
+                            )
                         py_stem = fname.rsplit(".", 1)[0]
                         if py_stem.isidentifier() and not py_stem.startswith("__"):
                             full_mod = f"{'.'.join(pkg_parts)}.{py_stem}"
                             _record_module_file(result, full_mod, f"{binary_path}!{entry_name}")
                 else:
-                    raw_mod = fname.rsplit(".", 1)[0] if fname.endswith((".pyc", ".pyo", ".py")) else fname
+                    raw_mod = (
+                        fname.rsplit(".", 1)[0]
+                        if fname.endswith((".pyc", ".pyo", ".py"))
+                        else fname
+                    )
                     parts = raw_mod.split(".")
                     if all(p.isidentifier() for p in parts):
                         _record_module_file(result, parts[0], f"{binary_path}!{entry_name}")
                         for i in range(2, len(parts) + 1):
-                            _record_module_file(result, ".".join(parts[:i]), f"{binary_path}!{entry_name}")
+                            _record_module_file(
+                                result, ".".join(parts[:i]), f"{binary_path}!{entry_name}"
+                            )
 
     if PYI_MAGIC not in raw_bytes:
         # Scan strings for Nuitka compiled module symbols: modulecode_<pkg> or PyInit_<pkg>
@@ -566,11 +594,17 @@ def _inspect_binary_payload_strings(
                 dir_segs = clean_s.split("/")[:-1]
                 ext_name = extract_extension_module_name(Path(clean_s).name)
                 if dir_segs:
-                    pkg_parts = [p for p in dir_segs if p.isidentifier() and not p.startswith(("pyi", "_pyi"))]
+                    pkg_parts = [
+                        p
+                        for p in dir_segs
+                        if p.isidentifier() and not p.startswith(("pyi", "_pyi"))
+                    ]
                     if pkg_parts:
                         _record_module_file(result, pkg_parts[0], f"{binary_path}!{clean_s}")
                         for i in range(2, len(pkg_parts) + 1):
-                            _record_module_file(result, ".".join(pkg_parts[:i]), f"{binary_path}!{clean_s}")
+                            _record_module_file(
+                                result, ".".join(pkg_parts[:i]), f"{binary_path}!{clean_s}"
+                            )
                         if ext_name:
                             full_ext = f"{'.'.join(pkg_parts)}.{ext_name}"
                             _record_module_file(result, full_ext, f"{binary_path}!{clean_s}")
@@ -580,7 +614,9 @@ def _inspect_binary_payload_strings(
                         _record_module_file(result, leaf, f"{binary_path}!{clean_s}")
                     if ext_name.isidentifier() and not ext_name.startswith(("pyi", "_pyi")):
                         _record_module_file(result, ext_name, f"{binary_path}!{clean_s}")
-            elif is_monolithic and re.match(r"^lib[a-zA-Z0-9_+-]+\.so(?:\.\d+)*$", Path(s.replace("\\", "/")).name):
+            elif is_monolithic and re.match(
+                r"^lib[a-zA-Z0-9_+-]+\.so(?:\.\d+)*$", Path(s.replace("\\", "/")).name
+            ):
                 lib_fname = Path(s.replace("\\", "/")).name
                 if not is_system_abi_lib(lib_fname) and lib_fname.lower() not in ext_needed_lower:
                     _register_embedded_native_lib(
@@ -590,7 +626,9 @@ def _inspect_binary_payload_strings(
                         result,
                         binary_format="ELF",
                     )
-            elif is_monolithic and re.match(r"^[a-zA-Z0-9_+.-]+\.dll$", Path(s.replace("\\", "/")).name, re.IGNORECASE):
+            elif is_monolithic and re.match(
+                r"^[a-zA-Z0-9_+.-]+\.dll$", Path(s.replace("\\", "/")).name, re.IGNORECASE
+            ):
                 dll_fname = Path(s.replace("\\", "/")).name
                 if (
                     not is_system_abi_lib(dll_fname)
@@ -618,7 +656,11 @@ def _register_embedded_native_lib(
     if is_system_abi_lib(lib_filename) or is_windows_msvc_runtime_dll(lib_filename):
         return
 
-    from rhada.elf import _infer_library_identity, _match_known_native_profile, infer_binary_provenance
+    from rhada.elf import (
+        _infer_library_identity,
+        _match_known_native_profile,
+        infer_binary_provenance,
+    )
 
     det_name, det_ver = _infer_library_identity(lib_filename, lib_filename, strings_list)
     if det_name in ("libc", "libm", "libdl", "libpthread", "librt", "ld"):
@@ -646,7 +688,9 @@ def _register_embedded_native_lib(
         copyright=cop_notice,
     )
 
-    comp = elf_to_native_component(fake_elf, is_monolithic=True, origin_package=orig_pkg, provenance=prov)
+    comp = elf_to_native_component(
+        fake_elf, is_monolithic=True, origin_package=orig_pkg, provenance=prov
+    )
     if comp:
         _merge_native_component(result.native_components, comp)
 
@@ -726,11 +770,15 @@ def inspect_compiled_distribution(
         if is_elf_file(dist_path):
             elf_info = parse_elf_binary(dist_path)
             elf_binaries.append(elf_info)
-            _inspect_exported_module_symbols(elf_info.exported_symbols_sample, dist_path.name, result)
+            _inspect_exported_module_symbols(
+                elf_info.exported_symbols_sample, dist_path.name, result
+            )
         elif is_pe_file(dist_path):
             pe_info = parse_pe_binary(dist_path)
             elf_binaries.append(pe_info)
-            _inspect_exported_module_symbols(pe_info.exported_symbols_sample, dist_path.name, result)
+            _inspect_exported_module_symbols(
+                pe_info.exported_symbols_sample, dist_path.name, result
+            )
 
         ext_needed = {lib for b in elf_binaries for lib in b.needed_libs}
         _inspect_binary_payload_strings(
@@ -743,7 +791,9 @@ def inspect_compiled_distribution(
 
         if result.bundler_type == BundlerType.NONE and elf_binaries:
             result.bundler_type = (
-                BundlerType.GENERIC_PE if elf_binaries[0].binary_format == "PE" else BundlerType.GENERIC_ELF
+                BundlerType.GENERIC_PE
+                if elf_binaries[0].binary_format == "PE"
+                else BundlerType.GENERIC_ELF
             )
 
         # Check adjacent compilation-report.xml if not explicitly provided
@@ -863,7 +913,9 @@ def inspect_compiled_distribution(
 
             # Check if it's a Python C-extension module (.pyd, .cpython-*.so, .abi3.so, exports PyInit_*,
             # bare stdlib .so, or a non-lib .so inside a package directory such as scipy/linalg/cython_blas.so)
-            has_pyinit = any(s.lstrip("_").startswith("PyInit_") for s in bin_info.exported_symbols_sample)
+            has_pyinit = any(
+                s.lstrip("_").startswith("PyInit_") for s in bin_info.exported_symbols_sample
+            )
             is_bare_stdlib_so = (
                 is_elf
                 and lower_fname.endswith(".so")
@@ -914,7 +966,10 @@ def inspect_compiled_distribution(
                 if (
                     result.bundler_type == BundlerType.NONE
                     and not (dist_path / "_internal").is_dir()
-                    and any(s.lstrip("_").startswith("modulecode_") for s in bin_info.exported_symbols_sample)
+                    and any(
+                        s.lstrip("_").startswith("modulecode_")
+                        for s in bin_info.exported_symbols_sample
+                    )
                 ):
                     # Nuitka standalone directories place compiled module .so/.pyd files directly
                     result.bundler_type = BundlerType.NUITKA
@@ -955,7 +1010,9 @@ def inspect_compiled_distribution(
 
     if result.bundler_type == BundlerType.NONE and elf_binaries:
         result.bundler_type = (
-            BundlerType.GENERIC_PE if elf_binaries[0].binary_format == "PE" else BundlerType.GENERIC_ELF
+            BundlerType.GENERIC_PE
+            if elf_binaries[0].binary_format == "PE"
+            else BundlerType.GENERIC_ELF
         )
 
     result.linkage_report = verify_binary_linkage(elf_binaries, dist_root=dist_path)
@@ -979,7 +1036,11 @@ def _resolve_pkg_for_module(
     cand = normalize_pkg_name(mod_name)
     if cand in ws.components:
         return cand
-    if cand == normalize_pkg_name(ws.project_name) or cand in ws.project_modules or mod_name in ws.project_modules:
+    if (
+        cand == normalize_pkg_name(ws.project_name)
+        or cand in ws.project_modules
+        or mod_name in ws.project_modules
+    ):
         return ws.project_name
 
     if "." in mod_name:
@@ -1003,7 +1064,9 @@ def _resolve_pkg_for_module(
         for fpath in file_paths:
             clean_fp = fpath.split("!", 1)[-1].replace("\\", "/").lstrip("./")
             clean_fp = clean_fp.removeprefix("_internal/")
-            dir_segs = [s for s in clean_fp.split("/")[:-1] if s and not _is_native_libs_dir_segment(s)]
+            dir_segs = [
+                s for s in clean_fp.split("/")[:-1] if s and not _is_native_libs_dir_segment(s)
+            ]
             for seg in dir_segs:
                 pkg = ws.module_to_package.get(seg) or ws.module_to_package.get(seg.lower())
                 if pkg:
@@ -1052,7 +1115,9 @@ def correlate_workspace_and_dist(
         for m in nmod.split(","):
             m_clean = m.strip()
             if m_clean:
-                mpkg = ws.module_to_package.get(m_clean) or normalize_pkg_name(m_clean.split(".")[0])
+                mpkg = ws.module_to_package.get(m_clean) or normalize_pkg_name(
+                    m_clean.split(".")[0]
+                )
                 if mpkg:
                     matched_pkg_names.add(mpkg)
 
@@ -1089,7 +1154,10 @@ def correlate_workspace_and_dist(
             # Merge richer metadata and licence texts from bundled .dist-info in dist dir
             if pname in dist_result.dist_info_components:
                 dcomp = dist_result.dist_info_components[pname]
-                if ws_comp.license_info.spdx_id == "NOASSERTION" and dcomp.license_info.spdx_id != "NOASSERTION":
+                if (
+                    ws_comp.license_info.spdx_id == "NOASSERTION"
+                    and dcomp.license_info.spdx_id != "NOASSERTION"
+                ):
                     merged_texts = dict(dcomp.license_info.license_texts)
                     for k, v in ws_comp.license_info.license_texts.items():
                         merged_texts.setdefault(k, v)
@@ -1110,7 +1178,9 @@ def correlate_workspace_and_dist(
                         if cp not in ws_comp.license_info.copyright_notices:
                             ws_comp.license_info.copyright_notices.append(cp)
             ws_comp.bundled_files = pkg_bundled_files.get(pname, [])
-            is_static_mod = any(m in dist_result.statically_compiled_modules for m in ws_comp.top_level_modules)
+            is_static_mod = any(
+                m in dist_result.statically_compiled_modules for m in ws_comp.top_level_modules
+            )
             ws_comp.is_statically_compiled = is_monolithic or is_static_mod
             ws_comp.has_dynamic_relinking = not is_monolithic and not is_static_mod
             ev_tag = f"bundled:{dist_result.bundler_type.value}"
@@ -1174,7 +1244,9 @@ def correlate_workspace_and_dist(
         ):
             continue
         mod_files = dist_result.module_files.get(mod_name, [])
-        resolved_pkg = _resolve_pkg_for_module(mod_name, ws, mod_files) or _resolve_pkg_for_module(top, ws, mod_files)
+        resolved_pkg = _resolve_pkg_for_module(mod_name, ws, mod_files) or _resolve_pkg_for_module(
+            top, ws, mod_files
+        )
         if resolved_pkg in project_pkgs:
             continue
         if resolved_pkg and any(c.name == resolved_pkg for c in active):
@@ -1190,11 +1262,14 @@ def correlate_workspace_and_dist(
 
         # In Python, dotted submodules belong to their top-level package; packages are identified by top
         norm_mod = normalize_pkg_name(top)
-        if (not include_dev and norm_mod in BUILD_AND_DEV_TOOLS) or any(c.name == norm_mod for c in active):
+        if (not include_dev and norm_mod in BUILD_AND_DEV_TOOLS) or any(
+            c.name == norm_mod for c in active
+        ):
             continue
 
         is_static_mod = (
-            mod_name in dist_result.statically_compiled_modules or top in dist_result.statically_compiled_modules
+            mod_name in dist_result.statically_compiled_modules
+            or top in dist_result.statically_compiled_modules
         )
         comp = Component(
             name=norm_mod,
@@ -1217,7 +1292,9 @@ def correlate_workspace_and_dist(
     for nat_comp in dist_result.native_components:
         if not nat_comp.origin_package:
             for pkg_name, lib_list in ws.package_libraries.items():
-                if nat_comp.name in lib_list or any(nat_comp.name in Path(bf).name for bf in nat_comp.bundled_files):
+                if nat_comp.name in lib_list or any(
+                    nat_comp.name in Path(bf).name for bf in nat_comp.bundled_files
+                ):
                     nat_comp.origin_package = pkg_name
                     nat_comp.provenance = f"vendored-in-wheel:{pkg_name}"
                     break
@@ -1236,7 +1313,10 @@ def correlate_workspace_and_dist(
                     nat_comp.provenance = inf_prov
         if nat_comp.name in ws.components:
             ws_nat = ws.components[nat_comp.name]
-            if nat_comp.license_info.spdx_id == "NOASSERTION" and ws_nat.license_info.spdx_id != "NOASSERTION":
+            if (
+                nat_comp.license_info.spdx_id == "NOASSERTION"
+                and ws_nat.license_info.spdx_id != "NOASSERTION"
+            ):
                 nat_comp.license_info = ws_nat.license_info
         active.append(nat_comp)
 
@@ -1246,11 +1326,15 @@ def correlate_workspace_and_dist(
             if not b.origin_package:
                 b_leaf = Path(b.path).name
                 for pkg_name, lib_list in ws.package_libraries.items():
-                    if b_leaf in lib_list or (b.detected_library_name and b.detected_library_name in lib_list):
+                    if b_leaf in lib_list or (
+                        b.detected_library_name and b.detected_library_name in lib_list
+                    ):
                         b.origin_package = pkg_name
                         b.provenance = f"vendored-in-wheel:{pkg_name}"
                         dist_result.linkage_report.binary_origins[b.path] = pkg_name
-                        if b_leaf not in dist_result.linkage_report.package_libraries.setdefault(pkg_name, []):
+                        if b_leaf not in dist_result.linkage_report.package_libraries.setdefault(
+                            pkg_name, []
+                        ):
                             dist_result.linkage_report.package_libraries[pkg_name].append(b_leaf)
                         break
                 if not b.origin_package:
@@ -1261,10 +1345,15 @@ def correlate_workspace_and_dist(
                         b.origin_package = inf_b_pkg
                         b.provenance = inf_b_prov
                         dist_result.linkage_report.binary_origins[b.path] = inf_b_pkg
-                        if b_leaf not in dist_result.linkage_report.package_libraries.setdefault(inf_b_pkg, []):
+                        if b_leaf not in dist_result.linkage_report.package_libraries.setdefault(
+                            inf_b_pkg, []
+                        ):
                             dist_result.linkage_report.package_libraries[inf_b_pkg].append(b_leaf)
         for issue in dist_result.linkage_report.issues:
-            if not issue.origin_package and issue.binary_path in dist_result.linkage_report.binary_origins:
+            if (
+                not issue.origin_package
+                and issue.binary_path in dist_result.linkage_report.binary_origins
+            ):
                 issue.origin_package = dist_result.linkage_report.binary_origins[issue.binary_path]
                 issue.provenance = f"vendored-in-wheel:{issue.origin_package}"
 
@@ -1327,8 +1416,14 @@ def build_distribution_file_inventory(
     if dist_res is not None:
         project_mods.update(dist_res.project_modules)
 
-    python_comp = next((c for c in components if c.name in ("python", "cpython", "libpython")), None)
-    py_ver = python_comp.version if python_comp and python_comp.version not in ("0.0.0", "0", "unknown") else None
+    python_comp = next(
+        (c for c in components if c.name in ("python", "cpython", "libpython")), None
+    )
+    py_ver = (
+        python_comp.version
+        if python_comp and python_comp.version not in ("0.0.0", "0", "unknown")
+        else None
+    )
 
     # Pre-map component lookups
     comp_by_name = {c.name: c for c in components}
@@ -1354,7 +1449,9 @@ def build_distribution_file_inventory(
             or (
                 fl.endswith(".bin")
                 and (
-                    is_binary_file(f) or f.stem.lower() in {target_name.lower(), target_name.lower().replace("-", "_")}
+                    is_binary_file(f)
+                    or f.stem.lower()
+                    in {target_name.lower(), target_name.lower().replace("-", "_")}
                 )
             )
             or (not f.suffix and is_binary_file(f))
@@ -1390,7 +1487,10 @@ def build_distribution_file_inventory(
             fname in {"report.xml", "compilation-report.xml", "pyvenv.cfg", "CACHEDIR.TAG"}
             or fname.startswith(".load-order-")
             or fname_lower.startswith(("third_party_notices", "sbom"))
-            or (fname_lower.startswith(("license", "licence", "notice", "authors")) and "/" not in rel_path)
+            or (
+                fname_lower.startswith(("license", "licence", "notice", "authors"))
+                and "/" not in rel_path
+            )
         ):
             category = DistributionFileCategory.DATA_OR_METADATA
             desc = f"Distribution packaging/compliance metadata ({fname})"
@@ -1422,7 +1522,9 @@ def build_distribution_file_inventory(
                 or first_seg in project_mods
             )
             if not is_pkg_mod and (
-                top in STDLIB_MODULES or top.lstrip("_") in STDLIB_MODULES or top.startswith("_codecs_")
+                top in STDLIB_MODULES
+                or top.lstrip("_") in STDLIB_MODULES
+                or top.startswith("_codecs_")
             ):
                 category = DistributionFileCategory.PYTHON_RUNTIME
                 comp_name = "python"
@@ -1435,8 +1537,14 @@ def build_distribution_file_inventory(
                 if (
                     any(rel_path == bf or fname == Path(bf).name for bf in nat.bundled_files)
                     or (nat.soname and fname_lower == nat.soname.lower())
-                    or (fname_lower.startswith("lib" + nat.name.lower()) and fname_lower.endswith((".dll", ".so")))
-                    or (fname_lower.startswith(nat.name.lower()) and fname_lower.endswith((".dll", ".so")))
+                    or (
+                        fname_lower.startswith("lib" + nat.name.lower())
+                        and fname_lower.endswith((".dll", ".so"))
+                    )
+                    or (
+                        fname_lower.startswith(nat.name.lower())
+                        and fname_lower.endswith((".dll", ".so"))
+                    )
                 ):
                     category = DistributionFileCategory.NATIVE_LIBRARY
                     comp_name = nat.name
@@ -1447,7 +1555,9 @@ def build_distribution_file_inventory(
 
         # 5. Compiler Runtime & Operating System ABI
         if category == DistributionFileCategory.UNACCOUNTED and (
-            is_windows_msvc_runtime_dll(fname) or is_windows_compiler_runtime_dll(fname) or is_system_abi_lib(fname)
+            is_windows_msvc_runtime_dll(fname)
+            or is_windows_compiler_runtime_dll(fname)
+            or is_system_abi_lib(fname)
         ):
             category = DistributionFileCategory.COMPILER_ABI
             comp_name = "msvc-runtime" if is_windows_msvc_runtime_dll(fname) else "compiler-abi"
@@ -1457,10 +1567,14 @@ def build_distribution_file_inventory(
         if category == DistributionFileCategory.UNACCOUNTED:
             if first_seg.endswith(".libs"):
                 pkg_lead = first_seg[:-5]
-                matched_c = comp_by_norm.get(normalize_pkg_name(pkg_lead)) or comp_by_name.get(pkg_lead)
+                matched_c = comp_by_norm.get(normalize_pkg_name(pkg_lead)) or comp_by_name.get(
+                    pkg_lead
+                )
                 is_int = matched_c and matched_c.is_internal
                 category = (
-                    DistributionFileCategory.APPLICATION_BINARY if is_int else DistributionFileCategory.PYTHON_PACKAGE
+                    DistributionFileCategory.APPLICATION_BINARY
+                    if is_int
+                    else DistributionFileCategory.PYTHON_PACKAGE
                 )
                 comp_name = matched_c.name if matched_c else pkg_lead
                 comp_ver = matched_c.version if matched_c else None
@@ -1513,7 +1627,11 @@ def build_distribution_file_inventory(
                 )
             else:
                 for c in components:
-                    if rel_path in c.bundled_files or clean_rel in c.bundled_files or fname in c.bundled_files:
+                    if (
+                        rel_path in c.bundled_files
+                        or clean_rel in c.bundled_files
+                        or fname in c.bundled_files
+                    ):
                         if c.is_internal:
                             category = DistributionFileCategory.APPLICATION_BINARY
                         elif c.component_type == ComponentType.PYTHON_PACKAGE:
@@ -1533,7 +1651,10 @@ def build_distribution_file_inventory(
         if category == DistributionFileCategory.UNACCOUNTED and (
             first_seg in project_pkgs
             or first_seg in project_mods
-            or any(rel_path.startswith(f"{pm}/") or clean_rel.startswith(f"{pm}/") for pm in project_mods)
+            or any(
+                rel_path.startswith(f"{pm}/") or clean_rel.startswith(f"{pm}/")
+                for pm in project_mods
+            )
             or (ws and ws.module_to_package.get(first_seg) in project_pkgs)
             or any(
                 c.is_internal

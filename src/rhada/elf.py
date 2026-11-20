@@ -21,15 +21,25 @@ from rhada.models import (
     Severity,
 )
 from rhada.pe import (
-    is_pe_bytes,
-    is_pe_file,
-    is_windows_compiler_runtime_dll,
-    is_windows_msvc_runtime_dll,
-    is_windows_system_dll,
-    parse_pe_bytes,
+    is_pe_bytes as is_pe_bytes,
+)
+from rhada.pe import (
+    is_pe_file as is_pe_file,
+)
+from rhada.pe import (
+    is_windows_compiler_runtime_dll as is_windows_compiler_runtime_dll,
+)
+from rhada.pe import (
+    is_windows_msvc_runtime_dll as is_windows_msvc_runtime_dll,
+)
+from rhada.pe import (
+    is_windows_system_dll as is_windows_system_dll,
 )
 from rhada.pe import (
     parse_pe_binary as parse_pe_binary,
+)
+from rhada.pe import (
+    parse_pe_bytes as parse_pe_bytes,
 )
 from rhada.spdx import (
     KNOWN_LIBRARY_TO_PACKAGE,
@@ -45,6 +55,7 @@ try:
     from elftools.elf.dynamic import DynamicSection
     from elftools.elf.elffile import ELFFile
     from elftools.elf.sections import SymbolTableSection
+    from elftools.elf.segments import InterpSegment
 
     HAS_PYELFTOOLS = True
 except ImportError:  # pragma: no cover
@@ -106,11 +117,19 @@ PRINTABLE_STR_RE = re.compile(rb"[\x20-\x7e]{4,200}")
 VERSION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("openblas", re.compile(r"\bOpenBLAS\s+v?(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
     ("lapack", re.compile(r"\bLAPACK\s+(?:version\s+)?(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
-    ("libgfortran", re.compile(r"\b(?:GNU\s+Fortran|GCC:)\s+(?:\([^)]*\)\s+)?(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
+    (
+        "libgfortran",
+        re.compile(
+            r"\b(?:GNU\s+Fortran|GCC:)\s+(?:\([^)]*\)\s+)?(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE
+        ),
+    ),
     ("fftw", re.compile(r"\bfftw-(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
     ("qhull", re.compile(r"\bQhull\s+(\d{4}\.\d+(?:\.\d+)?|\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
     ("openssl", re.compile(r"\bOpenSSL\s+(\d+\.\d+\.\d+[a-z0-9-]*)", re.IGNORECASE)),
-    ("zlib", re.compile(r"(?:\bzlib\s+version\s+|\bdeflate\s+)(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
+    (
+        "zlib",
+        re.compile(r"(?:\bzlib\s+version\s+|\bdeflate\s+)(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE),
+    ),
     ("sqlite3", re.compile(r"\bSQLite\s+version\s+(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
     ("expat", re.compile(r"\bexpat_(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
     ("xz", re.compile(r"\b(?:XZ\s+Utils|liblzma)\s+(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)),
@@ -131,7 +150,9 @@ VERSION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("libuuid", re.compile(r"\bUUID_(\d+\.\d+)", re.IGNORECASE)),
 ]
 
-SONAME_VERSION_RE = re.compile(r"^(lib[a-zA-Z0-9_+-]+?)(?:-(\d+(?:\.\d+)+))?\.so(?:\.(\d+(?:\.\d+)*))?$")
+SONAME_VERSION_RE = re.compile(
+    r"^(lib[a-zA-Z0-9_+-]+?)(?:-(\d+(?:\.\d+)+))?\.so(?:\.(\d+(?:\.\d+)*))?$"
+)
 DLL_VERSION_RE = re.compile(r"^([a-zA-Z0-9_+]+?)(?:[-_.](\d+(?:[._]\d+)*))?\.dll$", re.IGNORECASE)
 
 _SORTED_KNOWN_NATIVE_LIBS: list[tuple[str, NativeLibraryProfile]] = sorted(
@@ -266,10 +287,15 @@ def infer_binary_provenance(
             norm_pkg = MODULE_TO_KNOWN_PACKAGE.get(norm_pkg.lower(), norm_pkg)
             if norm_pkg:
                 return norm_pkg, f"vendored-in-wheel:{norm_pkg}"
-        if seg_lower in {".libs", "extra-dll", ".dylibs", "libs", "_libs", "dlls", "lib"} and idx > 0:
+        if (
+            seg_lower in {".libs", "extra-dll", ".dylibs", "libs", "_libs", "dlls", "lib"}
+            and idx > 0
+        ):
             cand_prev = dir_segs[idx - 1]
             cand_lower = cand_prev.lower()
-            if cand_lower not in SYSTEM_GENERIC_SEGMENTS and not (len(cand_prev) == 2 and cand_prev[1] == ":"):
+            if cand_lower not in SYSTEM_GENERIC_SEGMENTS and not (
+                len(cand_prev) == 2 and cand_prev[1] == ":"
+            ):
                 norm_pkg = normalize_pkg_name(cand_prev)
                 norm_pkg = MODULE_TO_KNOWN_PACKAGE.get(norm_pkg.lower(), norm_pkg)
                 if norm_pkg:
@@ -294,7 +320,9 @@ def infer_binary_provenance(
 
     # 4. Check if any directory segment directly names a known Python package or module
     for seg in dir_segs:
-        s_norm = normalize_pkg_name(seg.removesuffix(".dist-info").removesuffix(".libs").removesuffix(".dylibs"))
+        s_norm = normalize_pkg_name(
+            seg.removesuffix(".dist-info").removesuffix(".libs").removesuffix(".dylibs")
+        )
         s_lower = s_norm.lower()
         if s_lower in KNOWN_PYTHON_PACKAGES:
             mapped_pkg = MODULE_TO_KNOWN_PACKAGE.get(s_lower, s_lower)
@@ -326,7 +354,9 @@ def infer_binary_provenance(
     )
     if not is_abs and len(segments) > 1:
         first_seg = segments[0]
-        if first_seg.lower() not in SYSTEM_GENERIC_SEGMENTS and not (len(first_seg) == 2 and first_seg[1] == ":"):
+        if first_seg.lower() not in SYSTEM_GENERIC_SEGMENTS and not (
+            len(first_seg) == 2 and first_seg[1] == ":"
+        ):
             norm_pkg = normalize_pkg_name(
                 first_seg.removesuffix(".dist-info").removesuffix(".libs").removesuffix(".dylibs")
             )
@@ -374,7 +404,9 @@ def _strip_wheel_hashes_and_arch(name: str) -> str:
     """Strip auditwheel/delvewheel hash suffixes and Windows arch tags from a shared library filename."""
     cleaned = re.sub(r"-r0-[0-9a-f]{6,32}", "", name, flags=re.IGNORECASE)
     cleaned = re.sub(r"(?:-[0-9a-f]{6,32})+(?=\.(?:so|dll)\b)", "", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"-(?:x64|x86|win64|win32|amd64|arm64)(?=\.dll\b)", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"-(?:x64|x86|win64|win32|amd64|arm64)(?=\.dll\b)", "", cleaned, flags=re.IGNORECASE
+    )
     return cleaned
 
 
@@ -388,7 +420,11 @@ def _match_known_native_profile(lib_key: str) -> NativeLibraryProfile | None:
         for prefix, profile in _SORTED_KNOWN_NATIVE_LIBS:
             if cand == prefix:
                 return profile
-            if cand.startswith(prefix) and len(cand) > len(prefix) and cand[len(prefix)] in "-_.0123456789":
+            if (
+                cand.startswith(prefix)
+                and len(cand) > len(prefix)
+                and cand[len(prefix)] in "-_.0123456789"
+            ):
                 return profile
     return None
 
@@ -417,7 +453,9 @@ def _infer_library_identity(
     if ob_m:
         detected_lib = "libopenblas"
         ver_raw = ob_m.group(2)
-        detected_ver = f"0.{ver_raw}" if ver_raw.count(".") == 1 and not ver_raw.startswith("0.") else ver_raw
+        detected_ver = (
+            f"0.{ver_raw}" if ver_raw.count(".") == 1 and not ver_raw.startswith("0.") else ver_raw
+        )
 
     if not detected_lib:
         m = SONAME_VERSION_RE.match(cleaned_base)
@@ -444,7 +482,11 @@ def _infer_library_identity(
             py_win_m = re.match(r"^(?:lib)?python(\d)(\d{1,2})?\.dll$", cleaned_base, re.IGNORECASE)
             if py_win_m:
                 detected_lib = "libpython"
-                detected_ver = f"{py_win_m.group(1)}.{py_win_m.group(2)}" if py_win_m.group(2) else py_win_m.group(1)
+                detected_ver = (
+                    f"{py_win_m.group(1)}.{py_win_m.group(2)}"
+                    if py_win_m.group(2)
+                    else py_win_m.group(1)
+                )
             elif cleaned_base.lower().endswith(".dll"):
                 # Handle Windows DLLs (e.g., libssl-3.dll, libgfortran-5.dll, zlib1.dll, sqlite3.dll)
                 if re.match(r"^zlib\d+\.dll$", cleaned_base, re.IGNORECASE):
@@ -513,24 +555,32 @@ def _parse_elf_struct_fallback(data: bytes, path_str: str, sha256: str) -> ElfBi
     has_dynamic = False
     interpreter: str | None = None
     if bits == 64 and len(data) >= 64:
-        e_phoff, _, _, _, e_phentsize, e_phnum, _, _ = struct.unpack_from(f"{endian}QQQIHHHH", data, 32)
+        e_phoff, _, _, _, e_phentsize, e_phnum, _, _ = struct.unpack_from(
+            f"{endian}QQQIHHHH", data, 32
+        )
         for i in range(min(e_phnum, 128)):
             off = e_phoff + i * e_phentsize
             if off + 56 > len(data):
                 break
-            p_type, _, p_offset, _, _, p_filesz, _, _ = struct.unpack_from(f"{endian}IIQQQQQQ", data, off)
+            p_type, _, p_offset, _, _, p_filesz, _, _ = struct.unpack_from(
+                f"{endian}IIQQQQQQ", data, off
+            )
             if p_type == 2:  # PT_DYNAMIC
                 has_dynamic = True
             elif p_type == 3 and p_offset + p_filesz <= len(data):  # PT_INTERP
                 raw_interp = data[p_offset : p_offset + p_filesz].split(b"\x00", 1)[0]
                 interpreter = raw_interp.decode("utf-8", errors="replace")
     elif bits == 32 and len(data) >= 52:
-        e_phoff, _, _, _, e_phentsize, e_phnum, _, _ = struct.unpack_from(f"{endian}IIIIHHHH", data, 28)
+        e_phoff, _, _, _, e_phentsize, e_phnum, _, _ = struct.unpack_from(
+            f"{endian}IIIIHHHH", data, 28
+        )
         for i in range(min(e_phnum, 128)):
             off = e_phoff + i * e_phentsize
             if off + 32 > len(data):
                 break
-            p_type, p_offset, _, _, p_filesz, _, _, _ = struct.unpack_from(f"{endian}IIIIIIII", data, off)
+            p_type, p_offset, _, _, p_filesz, _, _, _ = struct.unpack_from(
+                f"{endian}IIIIIIII", data, off
+            )
             if p_type == 2:
                 has_dynamic = True
             elif p_type == 3 and p_offset + p_filesz <= len(data):
@@ -621,7 +671,7 @@ def parse_elf_bytes(raw_bytes: bytes, path_str: str = "<memory>") -> ElfBinaryIn
         has_dynamic_segment = False
         for segment in elffile.iter_segments():
             seg_type = segment.header.get("p_type")
-            if seg_type == "PT_INTERP":
+            if seg_type == "PT_INTERP" and isinstance(segment, InterpSegment):
                 with contextlib.suppress(ELFError, KeyError, OSError, UnicodeDecodeError):
                     interpreter = segment.get_interp_name()
             elif seg_type == "PT_DYNAMIC":
@@ -736,7 +786,9 @@ def _check_insecure_rpath(rpath_value: str | None) -> list[str]:
     return issues
 
 
-def _index_bundled_library_aliases(bundled_index: dict[str, str], fname: str, path_str: str) -> None:
+def _index_bundled_library_aliases(
+    bundled_index: dict[str, str], fname: str, path_str: str
+) -> None:
     """Register exact, lowercase, and wheel-hash-stripped aliases for a bundled shared library."""
     bundled_index.setdefault(fname, path_str)
     bundled_index.setdefault(fname.lower(), path_str)
@@ -755,7 +807,9 @@ def _index_bundled_library_aliases(bundled_index: dict[str, str], fname: str, pa
         if so_match.group(2):
             ver_so = f"{so_match.group(1)}.so.{so_match.group(2)}"
             bundled_index.setdefault(ver_so, path_str)
-    dll_match = re.match(r"^([a-zA-Z0-9_+]+?)(?:[-_.](\d+(?:[._]\d+)*))?\.dll$", cleaned, re.IGNORECASE)
+    dll_match = re.match(
+        r"^([a-zA-Z0-9_+]+?)(?:[-_.](\d+(?:[._]\d+)*))?\.dll$", cleaned, re.IGNORECASE
+    )
     if dll_match:
         base_dll = f"{dll_match.group(1)}.dll"
         bundled_index.setdefault(base_dll, path_str)
@@ -878,7 +932,9 @@ def verify_binary_linkage(
             resolved = bundled_index.get(needed_name) or bundled_index.get(needed_name.lower())
             if not resolved:
                 cleaned_needed = _strip_wheel_hashes_and_arch(needed_name)
-                resolved = bundled_index.get(cleaned_needed) or bundled_index.get(cleaned_needed.lower())
+                resolved = bundled_index.get(cleaned_needed) or bundled_index.get(
+                    cleaned_needed.lower()
+                )
             if not resolved and needed_name.lower().endswith(".dll"):
                 # Try without or with 'lib' prefix for Windows DLLs
                 if needed_name.lower().startswith("lib"):
@@ -892,10 +948,14 @@ def verify_binary_linkage(
                     dll_v_match = DLL_VERSION_RE.match(needed_name)
                     if dll_v_match and dll_v_match.group(2):
                         base_cand = f"{dll_v_match.group(1)}.dll"
-                        resolved = bundled_index.get(base_cand) or bundled_index.get(base_cand.lower())
+                        resolved = bundled_index.get(base_cand) or bundled_index.get(
+                            base_cand.lower()
+                        )
                         if not resolved and base_cand.lower().startswith("lib"):
                             no_lib_cand = base_cand[3:]
-                            resolved = bundled_index.get(no_lib_cand) or bundled_index.get(no_lib_cand.lower())
+                            resolved = bundled_index.get(no_lib_cand) or bundled_index.get(
+                                no_lib_cand.lower()
+                            )
             if not resolved:
                 # Prefix match for versioned SONAMEs (e.g., libcrypto.so.3 vs libcrypto.so.3.0.2)
                 stem_match = re.match(r"^(lib[a-zA-Z0-9_+-]+\.so(?:\.\d+)?)", needed_name)
@@ -917,7 +977,9 @@ def verify_binary_linkage(
                 if not iss_orig and not iss_prov:
                     iss_orig, iss_prov = infer_binary_provenance(resolved, needed_name)
                 if not iss_prov:
-                    iss_prov = f"vendored-in-wheel:{iss_orig}" if iss_orig else "bundled-by-build-tool"
+                    iss_prov = (
+                        f"vendored-in-wheel:{iss_orig}" if iss_orig else "bundled-by-build-tool"
+                    )
 
                 if iss_orig:
                     report.binary_origins.setdefault(needed_name, iss_orig)
@@ -942,7 +1004,9 @@ def verify_binary_linkage(
                 )
             elif is_system_abi_lib(needed_name):
                 n_lower = needed_name.lower()
-                is_win = n_lower.endswith((".dll", ".drv", ".ocx")) or is_windows_system_dll(needed_name)
+                is_win = n_lower.endswith((".dll", ".drv", ".ocx")) or is_windows_system_dll(
+                    needed_name
+                )
                 sys_prov = "system-abi:windows" if is_win else "system-abi:linux"
                 report.binary_origins.setdefault(needed_name, sys_prov)
                 if n_lower not in seen_system_abi_lower:
@@ -962,7 +1026,9 @@ def verify_binary_linkage(
                 )
             elif is_compiler_runtime_lib(needed_name):
                 n_lower = needed_name.lower()
-                is_win = n_lower.endswith((".dll", ".drv", ".ocx")) or is_windows_compiler_runtime_dll(needed_name)
+                is_win = n_lower.endswith(
+                    (".dll", ".drv", ".ocx")
+                ) or is_windows_compiler_runtime_dll(needed_name)
                 comp_prov = "system-abi:windows" if is_win else "system-abi:linux"
                 report.binary_origins.setdefault(needed_name, comp_prov)
                 if n_lower not in seen_system_abi_lower:
@@ -1036,7 +1102,9 @@ def elf_to_native_component(
     if is_windows_msvc_runtime_dll(fname):
         return None
     # Skip main executable unless it's a shared library
-    if elf_info.is_executable and not (fname_lower.startswith("lib") or fname_lower.endswith(".dll")):
+    if elf_info.is_executable and not (
+        fname_lower.startswith("lib") or fname_lower.endswith(".dll")
+    ):
         return None
     if fname_lower.endswith(".exe"):
         return None
@@ -1064,7 +1132,11 @@ def elf_to_native_component(
     if profile is None and is_system_abi_lib(fname):
         return None
 
-    lib_name = profile.canonical_name if profile else (elf_info.detected_library_name or canonical_key or fname)
+    lib_name = (
+        profile.canonical_name
+        if profile
+        else (elf_info.detected_library_name or canonical_key or fname)
+    )
     version = elf_info.detected_version or "unknown"
 
     if profile:

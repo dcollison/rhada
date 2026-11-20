@@ -82,11 +82,20 @@ def render_console_report(
     header.append("Target: ", style="bold")
     header.append(f"{report.target_name}@{tgt_ver}\n")
     header.append("Mode:   ", style="bold")
-    header.append(f"{report.mode.value} (layout={report.layout.value}, bundler={report.bundler_type.value})\n")
+    header.append(
+        f"{report.mode.value} (layout={report.layout.value}, bundler={report.bundler_type.value})\n"
+    )
     header.append("Status: ", style="bold")
     header.append(status_label, style=status_color)
 
-    out.print(Panel(header, title="[bold]Rhada Compliance & Security Audit[/bold]", expand=False, safe_box=True))
+    out.print(
+        Panel(
+            header,
+            title="[bold]Rhada Compliance & Security Audit[/bold]",
+            expand=False,
+            safe_box=True,
+        )
+    )
 
     # 1. Component Inventory Table
     # 1. Component Inventory Table
@@ -223,7 +232,9 @@ def render_console_report(
         file_summary_table.add_row("Total Distribution Files", str(fi.total_files))
         file_summary_table.add_row("Total Size", _format_size(fi.total_bytes))
         counts = fi.counts_by_category()
-        counts_str = ", ".join(f"{count} {cat.replace('-', ' ')}" for cat, count in sorted(counts.items()))
+        counts_str = ", ".join(
+            f"{count} {cat.replace('-', ' ')}" for cat, count in sorted(counts.items())
+        )
         file_summary_table.add_row(
             "Coverage",
             f"[{cov_style}]{cov_pct:.1f}%[/{cov_style}] ({fi.classified_count}/{fi.total_files} files: {counts_str})",
@@ -272,7 +283,9 @@ def render_console_report(
 
     # 4. Legal & Licensing Compliance Findings
     if report.compliance_findings:
-        lic_table = Table(title="Legal & Licence Compliance Findings", show_lines=True, safe_box=True)
+        lic_table = Table(
+            title="Legal & Licence Compliance Findings", show_lines=True, safe_box=True
+        )
         lic_table.add_column("Rule ID", style="bold", overflow="fold")
         lic_table.add_column("Severity", overflow="fold")
         lic_table.add_column("Component", overflow="fold")
@@ -300,7 +313,9 @@ def render_console_report(
             f"CRITICAL: {counts['critical']} | HIGH: {counts['high']} | "
             f"MEDIUM: {counts['medium']} | LOW: {counts['low']}"
         )
-        vuln_table = Table(title=f"Security Vulnerabilities ({summary_str})", show_lines=True, safe_box=True)
+        vuln_table = Table(
+            title=f"Security Vulnerabilities ({summary_str})", show_lines=True, safe_box=True
+        )
         vuln_table.add_column("Advisory / CVE", style="bold", overflow="fold")
         vuln_table.add_column("Severity", overflow="fold")
         vuln_table.add_column("CVSS", justify="right")
@@ -313,10 +328,16 @@ def render_console_report(
 
         for v in sorted(all_vulns, key=lambda x: (x.is_ignored, -x.severity.rank, x.id)):
             s_style = SEVERITY_COLORS.get(v.severity, "white")
-            cve_str = f"{v.id}\n({v.primary_cve})" if v.primary_cve and v.primary_cve != v.id else v.id
+            cve_str = (
+                f"{v.id}\n({v.primary_cve})" if v.primary_cve and v.primary_cve != v.id else v.id
+            )
             score_str = f"{v.cvss_score:.1f}" if v.cvss_score is not None else "N/A"
             if v.is_ignored:
-                reason_note = f"\n[yellow]Ignored: {v.ignore_reason}[/yellow]" if v.ignore_reason else "\n[yellow]Ignored by policy[/yellow]"
+                reason_note = (
+                    f"\n[yellow]Ignored: {v.ignore_reason}[/yellow]"
+                    if v.ignore_reason
+                    else "\n[yellow]Ignored by policy[/yellow]"
+                )
                 sev_cell = f"[dim strike]{v.severity.value.upper()}[/dim strike]{reason_note}"
             else:
                 sev_cell = f"[{s_style}]{v.severity.value.upper()}[/{s_style}]"

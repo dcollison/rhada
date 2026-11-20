@@ -8,9 +8,10 @@ version = "0.1.2"
 description = "Legal compliance, SBOM generation, binary linkage verification, and security vulnerability auditor for Python source workspaces and compiled Nuitka/PyInstaller distributions."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    { name = "Rhada DevSecOps Team" }
+    { name = "Dale Collison", email = "dale.a.collison@gmail.com" }
 ]
 keywords = [
     "rhada",
@@ -34,7 +35,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Legal Industry",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -65,14 +65,24 @@ rhada = "rhada.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/dcollison/rhada"
+Documentation = "https://dcollison.github.io/rhada/"
 Repository = "https://github.com/dcollison/rhada"
 Issues = "https://github.com/dcollison/rhada/issues"
+Changelog = "https://github.com/dcollison/rhada/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.13",
+    "pre-commit>=4.6.2",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.17.2",
+    "types-defusedxml",
+]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.7",
+    "mkdocstrings[python]>=1.0.6",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -85,7 +95,7 @@ addopts = "-q"
 
 [tool.ruff]
 target-version = "py311"
-line-length = 120
+line-length = 100
 
 [tool.ruff.lint]
 select = [
@@ -109,4 +119,17 @@ ignore = [
     "S108",
 ]
 
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
 
+[[tool.mypy.overrides]]
+module = [
+    "cvss",
+    "cvss.*",
+    "license_expression",
+    "pip_audit.*",
+]
+ignore_missing_imports = true

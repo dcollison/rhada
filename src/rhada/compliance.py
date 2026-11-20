@@ -121,7 +121,9 @@ def evaluate_compliance(
     for comp in components:
         if not comp.is_bundled or comp.is_internal:
             continue
-        if config.internal_packages and matches_package_pattern(comp.name, config.internal_packages):
+        if config.internal_packages and matches_package_pattern(
+            comp.name, config.internal_packages
+        ):
             continue
         if config.ignore_packages and matches_package_pattern(comp.name, config.ignore_packages):
             continue
@@ -389,7 +391,8 @@ def evaluate_compliance(
         if (
             not is_explicitly_allowed
             and not lic.license_texts
-            and lic.risk_category not in (LicenseRiskCategory.PUBLIC_DOMAIN, LicenseRiskCategory.UNKNOWN)
+            and lic.risk_category
+            not in (LicenseRiskCategory.PUBLIC_DOMAIN, LicenseRiskCategory.UNKNOWN)
         ):
             findings.append(
                 ComplianceFinding(
@@ -415,7 +418,9 @@ def evaluate_compliance(
         # 8a. GPL-2.0-only incompatibility with Apache-2.0
         # Under FSF analysis, Apache-2.0 patent termination (Sec. 3) and indemnity (Sec. 9) clauses
         # are "further restrictions" prohibited by GPL-2.0 Section 6.
-        has_gpl2 = any(c.license_info.spdx_id in ("GPL-2.0-only", "GPL-2.0") for c in active_bundled)
+        has_gpl2 = any(
+            c.license_info.spdx_id in ("GPL-2.0-only", "GPL-2.0") for c in active_bundled
+        )
         if has_gpl2:
             findings.extend(
                 ComplianceFinding(
@@ -439,13 +444,17 @@ def evaluate_compliance(
                 for ac in active_bundled
                 if (
                     ac.license_info.spdx_id == "Apache-2.0"
-                    or (not ac.license_info.is_dual_licensed and "Apache-2.0" in ac.license_info.license_choices)
+                    or (
+                        not ac.license_info.is_dual_licensed
+                        and "Apache-2.0" in ac.license_info.license_choices
+                    )
                 )
             )
 
         # 8b. Strong Copyleft combined with Proprietary components
         has_strong_copyleft = any(
-            c.license_info.risk_category == LicenseRiskCategory.STRONG_COPYLEFT for c in active_bundled
+            c.license_info.risk_category == LicenseRiskCategory.STRONG_COPYLEFT
+            for c in active_bundled
         )
         if has_strong_copyleft:
             findings.extend(
@@ -510,7 +519,11 @@ def generate_third_party_notices(report: AuditReport) -> str:
     else:
         for idx, comp in enumerate(bundled_sorted, start=1):
             lic_str = comp.license_info.spdx_id
-            ctype = "Native Library" if comp.component_type.value == "native-library" else "Python Package"
+            ctype = (
+                "Native Library"
+                if comp.component_type.value == "native-library"
+                else "Python Package"
+            )
             lines.append(f"  {idx:2d}. {comp.name} ({comp.version}) - {lic_str} [{ctype}]")
 
     lines.append("")
@@ -536,7 +549,9 @@ def generate_third_party_notices(report: AuditReport) -> str:
                 f"Note:        Dual-licensed ({' OR '.join(lic.license_choices)}); "
                 f"redistributed under the least restrictive applicable terms."
             )
-        is_lgpl = "LGPL" in lic.spdx_id.upper() or any("LGPL" in c.upper() for c in (lic.license_choices or []))
+        is_lgpl = "LGPL" in lic.spdx_id.upper() or any(
+            "LGPL" in c.upper() for c in (lic.license_choices or [])
+        )
         if is_lgpl:
             src_link = (
                 comp.source_url
@@ -560,7 +575,9 @@ def generate_third_party_notices(report: AuditReport) -> str:
                     "  source code archive, you may request it from the software distributor.",
                 ]
             )
-        lines.append("--------------------------------------------------------------------------------")
+        lines.append(
+            "--------------------------------------------------------------------------------"
+        )
         lines.append("")
 
         # Copyright notices
@@ -590,9 +607,9 @@ def generate_third_party_notices(report: AuditReport) -> str:
                 lines.append("")
         else:
             primary_choice = lic.license_choices[0] if lic.license_choices else lic.spdx_id
-            fallback_text = CANONICAL_LICENSE_FALLBACKS.get(primary_choice) or CANONICAL_LICENSE_FALLBACKS.get(
-                lic.spdx_id
-            )
+            fallback_text = CANONICAL_LICENSE_FALLBACKS.get(
+                primary_choice
+            ) or CANONICAL_LICENSE_FALLBACKS.get(lic.spdx_id)
             if fallback_text:
                 lines.append(f"--- Standard {primary_choice} License Notice ---")
                 lines.append(fallback_text)
@@ -616,9 +633,14 @@ def write_third_party_notices(
     """Write the generated THIRD_PARTY_NOTICES content (text or markdown) to disk."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     is_md = fmt in ("markdown", "md") or output_path.suffix.lower() in (".md", ".markdown")
-    content = generate_third_party_notices_markdown(report) if is_md else generate_third_party_notices(report)
+    content = (
+        generate_third_party_notices_markdown(report)
+        if is_md
+        else generate_third_party_notices(report)
+    )
     output_path.write_text(content, encoding="utf-8")
     return output_path
+
 
 def generate_third_party_notices_markdown(report: AuditReport) -> str:
     """
@@ -656,9 +678,15 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
         lines.append("| :-: | :--- | :--- | :--- | :--- | :--- |")
         for idx, comp in enumerate(bundled_sorted, start=1):
             lic_str = f"`{comp.license_info.spdx_id}`"
-            ctype = "Native Library" if comp.component_type.value == "native-library" else "Python Package"
+            ctype = (
+                "Native Library"
+                if comp.component_type.value == "native-library"
+                else "Python Package"
+            )
             hp = f"[{comp.homepage}]({comp.homepage})" if comp.homepage else "-"
-            lines.append(f"| {idx} | **{comp.name}** | `{comp.version}` | {ctype} | {lic_str} | {hp} |")
+            lines.append(
+                f"| {idx} | **{comp.name}** | `{comp.version}` | {ctype} | {lic_str} | {hp} |"
+            )
         lines.append("")
 
     lines.append("---")
@@ -668,7 +696,9 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
 
     for idx, comp in enumerate(bundled_sorted, start=1):
         lic = comp.license_info
-        ctype = "Native Library" if comp.component_type.value == "native-library" else "Python Package"
+        ctype = (
+            "Native Library" if comp.component_type.value == "native-library" else "Python Package"
+        )
         lines.append(f"### {idx}. {comp.name} (`{comp.version}`)")
         lines.append("")
         lines.append(f"- **Component Type:** {ctype}")
@@ -684,7 +714,9 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
                 "redistributed under the least restrictive applicable terms."
             )
 
-        is_lgpl = "LGPL" in lic.spdx_id.upper() or any("LGPL" in c.upper() for c in (lic.license_choices or []))
+        is_lgpl = "LGPL" in lic.spdx_id.upper() or any(
+            "LGPL" in c.upper() for c in (lic.license_choices or [])
+        )
         if is_lgpl:
             src_link = (
                 comp.source_url
@@ -699,8 +731,12 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
             lines.append("> [!IMPORTANT]")
             lines.append(f"> **LGPL Compliance & Source Code Offer ({lic.spdx_id})**")
             lines.append(">")
-            lines.append("> In accordance with LGPL requirements (Section 4(d) / Section 6), recipients of")
-            lines.append("> this distribution are entitled to obtain the complete corresponding source code")
+            lines.append(
+                "> In accordance with LGPL requirements (Section 4(d) / Section 6), recipients of"
+            )
+            lines.append(
+                "> this distribution are entitled to obtain the complete corresponding source code"
+            )
             lines.append(f"> for this library. Upstream source code is accessible at: <{src_link}>")
 
         # Copyright notices
@@ -721,7 +757,9 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
         if lic.notice_texts:
             for notice_filename, notice_body in sorted(lic.notice_texts.items()):
                 lines.append("")
-                lines.append(f"<details><summary><strong>Notice File ({notice_filename})</strong></summary>")
+                lines.append(
+                    f"<details><summary><strong>Notice File ({notice_filename})</strong></summary>"
+                )
                 lines.append("")
                 lines.append("```text")
                 lines.append(notice_body.strip())
@@ -732,7 +770,9 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
         if lic.license_texts:
             for lic_filename, lic_body in sorted(lic.license_texts.items()):
                 lines.append("")
-                lines.append(f"<details open><summary><strong>Verbatim Licence ({lic_filename})</strong></summary>")
+                lines.append(
+                    f"<details open><summary><strong>Verbatim Licence ({lic_filename})</strong></summary>"
+                )
                 lines.append("")
                 lines.append("```text")
                 lines.append(lic_body.strip())
@@ -740,10 +780,14 @@ def generate_third_party_notices_markdown(report: AuditReport) -> str:
                 lines.append("</details>")
         else:
             primary_choice = lic.license_choices[0] if lic.license_choices else lic.spdx_id
-            canonical = CANONICAL_LICENSE_FALLBACKS.get(primary_choice) or CANONICAL_LICENSE_FALLBACKS.get(lic.spdx_id)
+            canonical = CANONICAL_LICENSE_FALLBACKS.get(
+                primary_choice
+            ) or CANONICAL_LICENSE_FALLBACKS.get(lic.spdx_id)
             if canonical:
                 lines.append("")
-                lines.append(f"<details><summary><strong>Canonical Licence Notice ({primary_choice})</strong></summary>")
+                lines.append(
+                    f"<details><summary><strong>Canonical Licence Notice ({primary_choice})</strong></summary>"
+                )
                 lines.append("")
                 lines.append("```text")
                 lines.append(canonical.strip())

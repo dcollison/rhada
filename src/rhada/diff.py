@@ -30,7 +30,9 @@ class ComponentDelta:
     new_version: str | None = None
     old_license: str | None = None
     new_license: str | None = None
-    change_type: str = "unchanged"  # "added", "removed", "upgraded", "downgraded", "license_changed"
+    change_type: str = (
+        "unchanged"  # "added", "removed", "upgraded", "downgraded", "license_changed"
+    )
 
 
 @dataclass(slots=True)
@@ -117,7 +119,11 @@ def _extract_components_from_file(path: Path) -> dict[str, NormalizedComponent]:
                 if lic_list and isinstance(lic_list, list):
                     first = lic_list[0]
                     if "license" in first and isinstance(first["license"], dict):
-                        spdx = first["license"].get("id") or first["license"].get("name") or "NOASSERTION"
+                        spdx = (
+                            first["license"].get("id")
+                            or first["license"].get("name")
+                            or "NOASSERTION"
+                        )
                     elif "expression" in first:
                         spdx = first["expression"]
                 results[name.lower()] = NormalizedComponent(
@@ -275,10 +281,17 @@ def render_diff_console(result: SbomDiffResult, console: Console | None = None) 
     table.add_column("Licence Delta", overflow="fold")
 
     for c in result.added_components:
-        table.add_row("[green]+ ADDED[/green]", c.name, f"[green]{c.new_version}[/green]", c.new_license or "-")
+        table.add_row(
+            "[green]+ ADDED[/green]",
+            c.name,
+            f"[green]{c.new_version}[/green]",
+            c.new_license or "-",
+        )
 
     for c in result.removed_components:
-        table.add_row("[red]- REMOVED[/red]", c.name, f"[red]{c.old_version}[/red]", c.old_license or "-")
+        table.add_row(
+            "[red]- REMOVED[/red]", c.name, f"[red]{c.old_version}[/red]", c.old_license or "-"
+        )
 
     for c in result.modified_components:
         color = "yellow"
@@ -291,7 +304,11 @@ def render_diff_console(result: SbomDiffResult, console: Console | None = None) 
         else:
             tag = "[yellow]~ MODIFIED[/yellow]"
 
-        v_delta = f"{c.old_version} -> [{color}]{c.new_version}[/{color}]" if c.old_version != c.new_version else f"{c.old_version} (unchanged)"
+        v_delta = (
+            f"{c.old_version} -> [{color}]{c.new_version}[/{color}]"
+            if c.old_version != c.new_version
+            else f"{c.old_version} (unchanged)"
+        )
         lic_delta = (
             f"[dim strike]{c.old_license}[/dim strike] -> [bold]{c.new_license}[/bold]"
             if c.old_license != c.new_license
@@ -323,5 +340,7 @@ def render_diff_console(result: SbomDiffResult, console: Console | None = None) 
     if result.new_vulnerabilities:
         summary += f" | [red bold]{len(result.new_vulnerabilities)} new CVEs/advisories introduced[/red bold]"
     if result.resolved_vulnerabilities:
-        summary += f" | [green bold]{len(result.resolved_vulnerabilities)} CVEs resolved[/green bold]"
+        summary += (
+            f" | [green bold]{len(result.resolved_vulnerabilities)} CVEs resolved[/green bold]"
+        )
     out.print(f"\n{summary}\n")

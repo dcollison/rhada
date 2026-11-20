@@ -14,8 +14,8 @@ try:
     from cvss import CVSS4
     from cvss.exceptions import CVSS4Error
 except ImportError:
-    CVSS4 = None  # type: ignore[assignment, misc]
-    CVSS4Error = None  # type: ignore[assignment, misc]
+    CVSS4 = None
+    CVSS4Error = None
 from packaging.version import InvalidVersion, Version
 from pip_audit._service.interface import (
     ResolvedDependency,
@@ -59,7 +59,7 @@ def compute_cvss_v3_score(vector: str) -> float | None:
             try:
                 parsed4 = CVSS4(cleaned)
                 return float(parsed4.base_score)
-            except (CVSS4Error, ValueError, TypeError):  # type: ignore[misc]
+            except (CVSS4Error, ValueError, TypeError):
                 pass
         # Fallback approximation for CVSS 4.0 if parser raises or is unavailable
         if "/VC:H/VI:H" in clean_up or "/SC:H/SI:H" in clean_up:
@@ -277,7 +277,11 @@ class OsvClient:
         vuln_cache: dict[str, dict[str, Any]] = {}
 
         for comp in components:
-            if not comp.is_bundled or comp.is_internal or comp.component_type != ComponentType.PYTHON_PACKAGE:
+            if (
+                not comp.is_bundled
+                or comp.is_internal
+                or comp.component_type != ComponentType.PYTHON_PACKAGE
+            ):
                 continue
             dep = _build_resolved_dependency(comp)
             if dep is None:
@@ -303,7 +307,9 @@ class OsvClient:
                     full_data = vuln_cache.get(vid)
                     if full_data is None:
                         try:
-                            v_resp = self._external_client.get(OSV_VULN_URL_TEMPLATE.format(vuln_id=vid))
+                            v_resp = self._external_client.get(
+                                OSV_VULN_URL_TEMPLATE.format(vuln_id=vid)
+                            )
                             v_resp.raise_for_status()
                             full_data = v_resp.json()
                             vuln_cache[vid] = full_data
@@ -348,7 +354,10 @@ class OsvClient:
             if not comp.version or comp.version == "unknown":
                 continue
 
-            if comp.component_type == ComponentType.PYTHON_PACKAGE and self._pip_audit_service is None:
+            if (
+                comp.component_type == ComponentType.PYTHON_PACKAGE
+                and self._pip_audit_service is None
+            ):
                 resolved_dep = _build_resolved_dependency(comp)
                 pkg_name = resolved_dep.canonical_name if resolved_dep is not None else comp.name
                 pkg_ver = str(resolved_dep.version) if resolved_dep is not None else comp.version
@@ -399,7 +408,14 @@ class OsvClient:
                             continue
 
                         has_details = any(
-                            k in stub for k in ("summary", "details", "severity", "affected", "database_specific")
+                            k in stub
+                            for k in (
+                                "summary",
+                                "details",
+                                "severity",
+                                "affected",
+                                "database_specific",
+                            )
                         )
                         full_vuln_data = stub
                         if not has_details:

@@ -877,7 +877,7 @@ def normalize_single_license(raw: str) -> str:
     try:
         parsed = _SPDX_LICENSING.parse(cleaned, validate=True)
         if isinstance(parsed, (LicenseSymbol, LicenseWithExceptionSymbol)):
-            rendered = parsed.render()
+            rendered = str(parsed.render())
             if "gcc" in rendered.lower() and "gpl-3.0" in rendered.lower():
                 return "GPL-3.0-with-GCC-exception"
             return rendered
@@ -904,7 +904,9 @@ def normalize_single_license(raw: str) -> str:
         if "3" in lower:
             return "LGPL-3.0-or-later" if "+" in lower or "later" in lower else "LGPL-3.0-only"
         return "LGPL-2.1-or-later" if "+" in lower or "later" in lower else "LGPL-2.1-only"
-    if ("general public license" in lower or re.search(r"\bgpl\b", lower)) and "compatible" not in lower:
+    if (
+        "general public license" in lower or re.search(r"\bgpl\b", lower)
+    ) and "compatible" not in lower:
         if "gcc" in lower and "exception" in lower:
             return "GPL-3.0-with-GCC-exception"
         if "2" in lower:
@@ -921,7 +923,11 @@ def normalize_single_license(raw: str) -> str:
     if re.search(r"\bbsd\b", lower):
         if re.search(r"\b(?:0|zero)[-\s]*clause\b", lower) or "0bsd" in lower:
             return "0BSD"
-        if re.search(r"\b(?:2|two)[-\s]*clause\b", lower) or "simplified" in lower or "freebsd" in lower:
+        if (
+            re.search(r"\b(?:2|two)[-\s]*clause\b", lower)
+            or "simplified" in lower
+            or "freebsd" in lower
+        ):
             return "BSD-2-Clause"
         return "BSD-3-Clause"
     if re.search(r"\bmit\b", lower):
@@ -936,7 +942,9 @@ def normalize_single_license(raw: str) -> str:
         return "Public-Domain"
 
     # Corporate and internal licence patterns (e.g. "Acme Corp Internal Licence")
-    internal_match = re.search(r"\b(?:([A-Za-z0-9_ -]+?)\s+)?internal\s+licen[cs]e\b", cleaned, re.IGNORECASE)
+    internal_match = re.search(
+        r"\b(?:([A-Za-z0-9_ -]+?)\s+)?internal\s+licen[cs]e\b", cleaned, re.IGNORECASE
+    )
     if internal_match:
         prefix = (internal_match.group(1) or "").strip()
         cleaned_prefix = re.sub(r"^(?:the|an|a|our)\s+", "", prefix, flags=re.IGNORECASE).strip()
@@ -945,7 +953,9 @@ def normalize_single_license(raw: str) -> str:
             return f"LicenseRef-{slug}-Internal"
         return "LicenseRef-Internal"
 
-    if "internal" in lower and ("proprietary" in lower or "confidential" in lower or "rights reserved" in lower):
+    if "internal" in lower and (
+        "proprietary" in lower or "confidential" in lower or "rights reserved" in lower
+    ):
         return "LicenseRef-Internal"
 
     if "proprietary" in lower or "commercial" in lower:
@@ -989,7 +999,9 @@ def _infer_spdx_from_section(section: str) -> str:
         return "Unlicense"
 
     # Corporate and internal licence patterns (e.g. "Acme Corp Internal Licence. All rights reserved.")
-    internal_match = re.search(r"\b(?:([A-Za-z0-9_ -]+?)\s+)?internal\s+licen[cs]e\b", section, re.IGNORECASE)
+    internal_match = re.search(
+        r"\b(?:([A-Za-z0-9_ -]+?)\s+)?internal\s+licen[cs]e\b", section, re.IGNORECASE
+    )
     if internal_match:
         prefix = (internal_match.group(1) or "").strip()
         cleaned_prefix = re.sub(r"^(?:the|an|a|our)\s+", "", prefix, flags=re.IGNORECASE).strip()
@@ -999,7 +1011,10 @@ def _infer_spdx_from_section(section: str) -> str:
         return "LicenseRef-Internal"
 
     if (
-        ("all rights reserved" in lower and ("internal" in lower or "proprietary" in lower or "confidential" in lower))
+        (
+            "all rights reserved" in lower
+            and ("internal" in lower or "proprietary" in lower or "confidential" in lower)
+        )
         or "proprietary and confidential" in lower
         or "for internal use only" in lower
     ):
@@ -1033,7 +1048,12 @@ def classify_single_spdx(spdx_id: str) -> LicenseRiskCategory:
     if " WITH " in spdx_id:
         base_id, exc_id = spdx_id.split(" WITH ", 1)
         exc_lower = exc_id.lower()
-        if "llvm" in exc_lower or "gcc" in exc_lower or "autoconf" in exc_lower or "bison" in exc_lower:
+        if (
+            "llvm" in exc_lower
+            or "gcc" in exc_lower
+            or "autoconf" in exc_lower
+            or "bison" in exc_lower
+        ):
             return LicenseRiskCategory.PERMISSIVE
         if "classpath" in exc_lower:
             return LicenseRiskCategory.WEAK_COPYLEFT
@@ -1108,7 +1128,9 @@ def _normalize_compound_leaves(expr: str, *, allow_unknown: bool = False) -> str
     Normalise leaf clauses between parentheses and AND/OR operators so multi-word
     licence names (e.g. 'MIT License AND GPLv3') parse cleanly via `license_expression`.
     """
-    cleaned = re.sub(r"^(?:dual(?:\s+licen[cs]ed?)?|licen[cs]es?)\s*:\s*", "", expr.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"^(?:dual(?:\s+licen[cs]ed?)?|licen[cs]es?)\s*:\s*", "", expr.strip(), flags=re.IGNORECASE
+    )
     if "://" not in cleaned and cleaned.lower() not in RAW_TO_SPDX:
         cleaned = re.sub(r"\s*/\s*", " OR ", cleaned)
     else:
@@ -1161,7 +1183,11 @@ def parse_spdx_expression(
     `(normalised_spdx_expression, effective_risk_category, is_dual_licensed, choices)`.
     """
     candidates: list[str] = []
-    if raw_expression and raw_expression.strip() and raw_expression.strip().upper() not in {"UNKNOWN", "NONE"}:
+    if (
+        raw_expression
+        and raw_expression.strip()
+        and raw_expression.strip().upper() not in {"UNKNOWN", "NONE"}
+    ):
         expr = raw_expression.strip()
         if "\n" in expr or len(expr) > 120:
             first_line = expr.splitlines()[0].strip()
@@ -1179,7 +1205,9 @@ def parse_spdx_expression(
                 and expr.lower() not in RAW_TO_SPDX
                 and not expr.startswith("License ::")
             )
-            is_compound_syntax = bool(re.search(r"\b(?:OR|AND)\b", expr, flags=re.IGNORECASE)) or is_slash_compound
+            is_compound_syntax = (
+                bool(re.search(r"\b(?:OR|AND)\b", expr, flags=re.IGNORECASE)) or is_slash_compound
+            )
             if is_compound_syntax:
                 parsed_compound = _parse_compound_spdx(expr)
                 if parsed_compound is not None:
@@ -1205,7 +1233,10 @@ def parse_spdx_expression(
     if not candidates and license_texts:
         sorted_texts = sorted(
             license_texts.items(),
-            key=lambda kv: (1 if "bundled" in kv[0].lower() or "third" in kv[0].lower() else 0, kv[0].lower()),
+            key=lambda kv: (
+                1 if "bundled" in kv[0].lower() or "third" in kv[0].lower() else 0,
+                kv[0].lower(),
+            ),
         )
         for _fname, text in sorted_texts:
             inferred = infer_spdx_from_license_text(text)
@@ -1223,17 +1254,23 @@ def parse_spdx_expression(
     raw_lower = (raw_expression or "").lower()
     if " and " in raw_lower:
         spdx_expr = " AND ".join(candidates)
-        worst_cat = max((classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c])
+        worst_cat = max(
+            (classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c]
+        )
         return spdx_expr, worst_cat, False, candidates
 
     if " or " in raw_lower or "/" in raw_lower:
         spdx_expr = " OR ".join(candidates)
-        best_cat = min((classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c])
+        best_cat = min(
+            (classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c]
+        )
         return spdx_expr, best_cat, True, candidates
 
     # When multiple distinct licenses are declared without explicit 'and', treat as dual-licensed (OR) choice per PEP 639
     spdx_expr = " OR ".join(candidates)
-    best_cat = min((classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c])
+    best_cat = min(
+        (classify_single_spdx(c) for c in candidates), key=lambda c: RISK_SEVERITY_ORDER[c]
+    )
     return spdx_expr, best_cat, True, candidates
 
 

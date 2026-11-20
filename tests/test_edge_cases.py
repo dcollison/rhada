@@ -132,10 +132,21 @@ def test_spdx_heuristics_and_text_inference_exhaustive() -> None:
 
     assert infer_spdx_from_license_text("Apache License, Version 2.0") == "Apache-2.0"
     assert infer_spdx_from_license_text("GNU Affero General Public License") == "AGPL-3.0-or-later"
-    assert infer_spdx_from_license_text("GNU Lesser General Public License Version 3") == "LGPL-3.0-or-later"
-    assert infer_spdx_from_license_text("GNU Lesser General Public License Version 2.1") == "LGPL-2.1-or-later"
-    assert infer_spdx_from_license_text("GNU General Public License Version 2") == "GPL-2.0-or-later"
-    assert infer_spdx_from_license_text("GNU General Public License ... runtime library exception") == "GPL-3.0-with-GCC-exception"
+    assert (
+        infer_spdx_from_license_text("GNU Lesser General Public License Version 3")
+        == "LGPL-3.0-or-later"
+    )
+    assert (
+        infer_spdx_from_license_text("GNU Lesser General Public License Version 2.1")
+        == "LGPL-2.1-or-later"
+    )
+    assert (
+        infer_spdx_from_license_text("GNU General Public License Version 2") == "GPL-2.0-or-later"
+    )
+    assert (
+        infer_spdx_from_license_text("GNU General Public License ... runtime library exception")
+        == "GPL-3.0-with-GCC-exception"
+    )
     assert infer_spdx_from_license_text("Mozilla Public License Version 2.0") == "MPL-2.0"
     assert (
         infer_spdx_from_license_text(
@@ -145,16 +156,22 @@ def test_spdx_heuristics_and_text_inference_exhaustive() -> None:
         == "ISC"
     )
     assert (
-        infer_spdx_from_license_text("Permission to use, copy, modify, and/or distribute this software for any purpose")
+        infer_spdx_from_license_text(
+            "Permission to use, copy, modify, and/or distribute this software for any purpose"
+        )
         == "0BSD"
     )
     assert (
-        infer_spdx_from_license_text("Redistribution and use in source and binary forms, with or without modification")
+        infer_spdx_from_license_text(
+            "Redistribution and use in source and binary forms, with or without modification"
+        )
         == "BSD-2-Clause"
     )
     assert infer_spdx_from_license_text("Python Software Foundation License Version 2") == "PSF-2.0"
     assert (
-        infer_spdx_from_license_text("This is free and unencumbered software released into the public domain")
+        infer_spdx_from_license_text(
+            "This is free and unencumbered software released into the public domain"
+        )
         == "Unlicense"
     )
 
@@ -211,7 +228,9 @@ dependencies = ["gpl-pkg>=1.0.0", "proprietary-pkg>=1.0.0", "mystery-pkg>=1.0.0"
     )
     sp = ws_dir / ".venv" / "Lib" / "site-packages"
     create_dist_info(sp, "gpl-pkg", "1.0.0", license_str="GPL-3.0-only", top_level=["gpl_pkg"])
-    create_dist_info(sp, "proprietary-pkg", "1.0.0", license_str="Proprietary", top_level=["proprietary_pkg"])
+    create_dist_info(
+        sp, "proprietary-pkg", "1.0.0", license_str="Proprietary", top_level=["proprietary_pkg"]
+    )
     create_dist_info(sp, "mystery-pkg", "1.0.0", license_str="UNKNOWN", top_level=["mystery_pkg"])
 
     # Create PyInstaller standalone directory with _internal/
@@ -235,7 +254,10 @@ dependencies = ["gpl-pkg>=1.0.0", "proprietary-pkg>=1.0.0", "mystery-pkg>=1.0.0"
                                 {
                                     "id": "CVE-2026-0001",
                                     "summary": "Critical vulnerability in gpl-pkg",
-                                    "database_specific": {"severity": "CRITICAL", "cvss_score": 9.8},
+                                    "database_specific": {
+                                        "severity": "CRITICAL",
+                                        "cvss_score": 9.8,
+                                    },
                                 }
                             ]
                         },
@@ -306,7 +328,9 @@ def test_misc_helper_edge_cases() -> None:
 
 def test_nested_compound_spdx_expressions_and_with_exceptions() -> None:
     # 1. (MIT OR Apache-2.0) AND GPL-3.0-only -> must evaluate as STRONG_COPYLEFT (not PERMISSIVE!)
-    spdx_1, cat_1, is_dual_1, choices_1 = parse_spdx_expression("(MIT OR Apache-2.0) AND GPL-3.0-only")
+    spdx_1, cat_1, is_dual_1, choices_1 = parse_spdx_expression(
+        "(MIT OR Apache-2.0) AND GPL-3.0-only"
+    )
     assert spdx_1 == "(MIT OR Apache-2.0) AND GPL-3.0-only"
     assert cat_1 == LicenseRiskCategory.STRONG_COPYLEFT
     assert is_dual_1 is False
@@ -553,7 +577,9 @@ def test_compound_spdx_multiword_unknown_and_metadata_placeholders(tmp_path: Pat
     assert choices_mw == ["MIT", "GPL-3.0-only"]
 
     # 2. Conjunctive expression with an unrecognised leaf must not silently match the known half
-    spdx_unk, cat_unk, is_dual_unk, choices_unk = parse_spdx_expression("MIT AND CustomUnrecognisedClause")
+    spdx_unk, cat_unk, is_dual_unk, choices_unk = parse_spdx_expression(
+        "MIT AND CustomUnrecognisedClause"
+    )
     assert spdx_unk == "NOASSERTION"
     assert cat_unk == LicenseRiskCategory.UNKNOWN
     assert is_dual_unk is False
@@ -606,7 +632,8 @@ def test_compound_spdx_multiword_unknown_and_metadata_placeholders(tmp_path: Pat
     )
     meta_file = dist_dir / "METADATA"
     meta_file.write_text(
-        meta_file.read_text(encoding="utf-8") + "Project-URL: Homepage, https://example.org/placeholder\n",
+        meta_file.read_text(encoding="utf-8")
+        + "Project-URL: Homepage, https://example.org/placeholder\n",
         encoding="utf-8",
     )
     (tmp_path / "pyproject.toml").write_text(
@@ -709,9 +736,12 @@ def test_record_traversal_protection(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     meta_file = dist_dir / "METADATA"
-    meta_file.write_text("Metadata-Version: 2.1\nName: evil-pkg\nVersion: 1.0.0\n", encoding="utf-8")
+    meta_file.write_text(
+        "Metadata-Version: 2.1\nName: evil-pkg\nVersion: 1.0.0\n", encoding="utf-8"
+    )
 
     from rhada.workspace import _discover_dist_native_libraries
+
     pkg_comp = Component(name="evil-pkg", version="1.0.0")
     results = _discover_dist_native_libraries(dist_dir, pkg_comp)
     # None of the traversed paths should be loaded as native components
@@ -727,27 +757,22 @@ def test_parse_req_name_direct_urls_and_archives() -> None:
     assert parse_req_name("Flask[async] >= 2.0") == "flask"
 
 
-
-
-
-
-
 def test_parse_nuitka_source_directives(tmp_path: Path) -> None:
     from rhada.workspace import parse_nuitka_source_directives
 
     main_py = tmp_path / "main.py"
     main_py.write_text(
-        '# nuitka-project: --include-package=cryptography --enable-plugin=numpy\n'
-        '# nuitka-project: --include-package-data=certifi\n'
+        "# nuitka-project: --include-package=cryptography --enable-plugin=numpy\n"
+        "# nuitka-project: --include-package-data=certifi\n"
         '# nuitka-project: --include-data-files="configs/*.json=configs/"\n'
-        '# nuitka-project:\n'
-        '#    --include-module=engine.worker\n'
-        '#    --include-package=sqlalchemy\n'
+        "# nuitka-project:\n"
+        "#    --include-module=engine.worker\n"
+        "#    --include-package=sqlalchemy\n"
         '# nuitka-project-if sys.platform != "nonexistent_os":\n'
-        '#    --include-package=pytest\n'
+        "#    --include-package=pytest\n"
         '# nuitka-project-if sys.platform == "nonexistent_os":\n'
-        '#    --include-package=should_be_skipped\n'
-        'import os\n'
+        "#    --include-package=should_be_skipped\n"
+        "import os\n"
         'print("hello")\n',
         encoding="utf-8",
     )
@@ -775,8 +800,8 @@ def test_inspect_workspace_nuitka_directives_and_dist_correlation(tmp_path: Path
         encoding="utf-8",
     )
     (ws_dir / "main.py").write_text(
-        '# nuitka-project: --include-package=cryptography\n'
-        '# nuitka-project: --enable-plugin=numpy\n',
+        "# nuitka-project: --include-package=cryptography\n"
+        "# nuitka-project: --enable-plugin=numpy\n",
         encoding="utf-8",
     )
 
@@ -818,7 +843,11 @@ def test_build_resolved_dependency_version_sanitization() -> None:
     assert rd2.version == Version("1.26.15")
 
     # Non-PEP-440 suffix or snapshot (e.g. 2.1.0-alpha+build.123)
-    c3 = Component(name="custom-pkg", version="2.1.0-custom-snapshot", component_type=ComponentType.PYTHON_PACKAGE)
+    c3 = Component(
+        name="custom-pkg",
+        version="2.1.0-custom-snapshot",
+        component_type=ComponentType.PYTHON_PACKAGE,
+    )
     rd3 = _build_resolved_dependency(c3)
     assert rd3 is not None
     assert rd3.version == Version("2.1.0")
@@ -830,7 +859,9 @@ def test_build_resolved_dependency_version_sanitization() -> None:
     assert rd4.version == Version("20240101")
 
     # Unknown or empty version
-    c5 = Component(name="unknown-pkg", version="unknown", component_type=ComponentType.PYTHON_PACKAGE)
+    c5 = Component(
+        name="unknown-pkg", version="unknown", component_type=ComponentType.PYTHON_PACKAGE
+    )
     assert _build_resolved_dependency(c5) is None
 
 

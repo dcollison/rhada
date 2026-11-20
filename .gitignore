@@ -38,6 +38,10 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 example_package/
+
+# Documentation builds
+site/
+
 # IDE
 .idea/
 .vscode/
