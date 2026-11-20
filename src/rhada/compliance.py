@@ -364,28 +364,27 @@ def evaluate_compliance(
                 )
 
         # 6. Unknown / Unasserted Licence
-        elif lic.risk_category == LicenseRiskCategory.UNKNOWN:
-            if not is_explicitly_allowed:
-                sev = Severity.LOW if config.allow_unknown_license else Severity.MEDIUM
-                findings.append(
-                    ComplianceFinding(
-                        rule_id="LIC-UNKNOWN",
-                        component_name=comp.name,
-                        component_version=comp.version,
-                        license_spdx=spdx_id,
-                        risk_category=lic.risk_category,
-                        severity=sev,
-                        title=f"Undeclared or unrecognised licence for '{comp.name}'",
-                        description=(
-                            f"Component '{comp.name}@{comp.version}' has raw licence metadata '{lic.declared_raw}' "
-                            "which could not be resolved to a recognised SPDX identifier."
-                        ),
-                        remediation=(
-                            f"Inspect the upstream repository for '{comp.name}' to confirm redistribution rights "
-                            "and record its SPDX identifier, or approve it via --allow-licence."
-                        ),
-                    )
+        elif lic.risk_category == LicenseRiskCategory.UNKNOWN and not is_explicitly_allowed:
+            sev = Severity.LOW if config.allow_unknown_license else Severity.MEDIUM
+            findings.append(
+                ComplianceFinding(
+                    rule_id="LIC-UNKNOWN",
+                    component_name=comp.name,
+                    component_version=comp.version,
+                    license_spdx=spdx_id,
+                    risk_category=lic.risk_category,
+                    severity=sev,
+                    title=f"Undeclared or unrecognised licence for '{comp.name}'",
+                    description=(
+                        f"Component '{comp.name}@{comp.version}' has raw licence metadata '{lic.declared_raw}' "
+                        "which could not be resolved to a recognised SPDX identifier."
+                    ),
+                    remediation=(
+                        f"Inspect the upstream repository for '{comp.name}' to confirm redistribution rights "
+                        "and record its SPDX identifier, or approve it via --allow-licence."
+                    ),
                 )
+            )
 
         # 7. Missing verbatim licence text check for non-public-domain components
         if (

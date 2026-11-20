@@ -35,7 +35,7 @@ jobs:
         run: uv sync --frozen --group docs
 
       - name: Build documentation
-        run: uv run --group docs mkdocs build --strict
+        run: uv run --frozen --group docs mkdocs build --strict
 
       - name: Set up GitHub Pages
         uses: actions/configure-pages@v5
