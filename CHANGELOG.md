@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-11-23
+
+### Added
+- Added MkDocs Material documentation (`mkdocs.yml`, `docs/`) with `mkdocstrings` API reference and GitHub Pages deployment workflow (`.github/workflows/docs.yml`).
+- Added `.github/CODEOWNERS`, `.pre-commit-config.yaml`, `LICENSE`, `.python-version` (`3.14`), and `uv.lock`.
+
+### Changed
+- Hardened and refactored compliance, ELF/PE inspection, SBOM/SPDX generation, workspace scanning, and CLI modules alongside expanded test coverage.
+- Aligned `pyproject.toml` metadata/URLs/classifiers, CI matrix across Python `3.11`–`3.14` and `ubuntu`/`windows`/`macos`, and PyPI Trusted Publishing release workflow (`.github/workflows/release.yml`).
+
 ## [0.1.2] - 2026-10-30
 
 ### Fixed
