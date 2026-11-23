@@ -47,7 +47,7 @@ Use `rhada` in downstream repositories via `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/dcollison/rhada
-    rev: v0.1.2
+    rev: v0.1.3
     hooks:
       - id: rhada
 ```
